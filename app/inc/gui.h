@@ -7,6 +7,7 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QMessageBox>
+#include <QTabWidget>
 #include <QDateTime>
 #include <QLineEdit>
 #include <QCheckBox>
@@ -38,6 +39,7 @@ private slots:
 
     void setupWindow();
     void setupMainConsole();
+    void setupFlashInterface();
 
 public:
 

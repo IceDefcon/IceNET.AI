@@ -25,21 +25,36 @@ static const mainConsoleType c =
 
 gui::gui()
 {
-    std::cout << "[MAIN] [CONSTRUCTOR]" << this << ":: gui";
+    std::cout << "[MAIN] [CONSTRUCTOR] " << this << " :: gui" << std::endl;
 
     setupWindow();
-    setupMainConsole();
+    // setupMainConsole();
+    // setupFlashInterface();
 }
 
 gui::~gui()
 {
-    std::cout << "[MAIN] [DESTRUCTOR]" << this << ":: gui";
+    std::cout << "[MAIN] [DESTRUCTOR] " << this << " :: gui" << std::endl;
 }
 
 void gui::setupWindow()
 {
-    setWindowTitle("IceNET Platform");
-    setFixedSize(w.xWindow, w.yWindow);
+    setWindowTitle("IceNET AI Drone Platform");
+    setFixedSize(w.xWindow, w.yWindow);\
+    setStyleSheet(main_window_style);
+
+    QTabWidget *tabs = new QTabWidget(this);
+    tabs->setTabPosition(QTabWidget::West);
+    tabs->setStyleSheet(tab_style);
+    tabs->setGeometry(w.xGap, w.yGap, w.xWindow - w.xGap*2, w.yWindow - w.yGap*2);
+
+    QWidget *flash = new QWidget();
+    QWidget *config = new QWidget();
+    QWidget *comms = new QWidget();
+
+    tabs->addTab(flash, "FLASH");
+    tabs->addTab(config, "CONFIG");
+    tabs->addTab(comms, "COMMS");
 }
 
 void gui::setupMainConsole()
@@ -47,5 +62,24 @@ void gui::setupMainConsole()
     m_mainConsole = new QPlainTextEdit(this);
     m_mainConsole->setReadOnly(true);
     m_mainConsole->setGeometry(c.xPosition, c.yPosition, c.xSize, c.ySize);
+
+    QFont consoleFont;
+    consoleFont.setFamily("Courier");
+    consoleFont.setPointSize(9);
+    consoleFont.setBold(false);
+
+    m_mainConsole->setFont(consoleFont);
+
     m_mainConsole->setPlainText("[INIT] Main Console Initialized...");
+}
+
+void gui::setupFlashInterface()
+{
+    QLabel *reset_label = new QLabel("Fx3 Flash", this);
+    QFont reset_labelFont;
+    reset_labelFont.setFamily("Courier");
+    reset_labelFont.setPointSize(20);
+    reset_labelFont.setBold(true);
+    reset_label->setFont(reset_labelFont);
+    reset_label->setGeometry(w.xGap, w.yGap, w.xLogo, w.yLogo);
 }

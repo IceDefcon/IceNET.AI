@@ -19,3 +19,71 @@ typedef struct
     uint32_t xSize;
     uint32_t ySize;
 } mainConsoleType;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+static constexpr const char* main_window_style =
+R"(
+    QWidget
+    {
+        background-color: #002b36;  /* Solarized Dark background */
+        color: #839496;             /* Solarized base text */
+        font-family: DejaVu Sans Mono;
+    }
+
+    QTabWidget::pane
+    {
+        border: 1px solid #073642;  /* subtle Solarized border */
+        border-radius: 12px;
+        background: #073642;        /* darker pane base */
+    }
+
+    QTabWidget
+    {
+        background: transparent;
+    }
+
+    QWidget#centralWidget
+    {
+        background: #073642;
+    }
+)";
+
+static constexpr const char* tab_style =
+R"(
+    QTabWidget::pane
+    {
+        border: none;
+        background: #073642;  /* Solarized pane base */
+    }
+
+    QTabBar::tab
+    {
+        width: 20px;
+        height: 60px;
+
+        font-family: DejaVu Sans Mono;
+        font-size: 10pt;
+        font-weight: bold;
+
+        color: #839496;  /* base text */
+        background: #073642;
+
+        border-radius: 0px;  /* fully squared */
+        margin: 2px;         /* small gap between tabs */
+        padding: 4px;        /* tight internal padding */
+    }
+
+    QTabBar::tab:hover
+    {
+        background: #586e75;  /* Solarized highlight */
+        color: #fdf6e3;       /* light text */
+    }
+
+    QTabBar::tab:selected
+    {
+        background: #268bd2;  /* Solarized blue for selected */
+        color: #fdf6e3;       /* bright selected text */
+    }
+)";
