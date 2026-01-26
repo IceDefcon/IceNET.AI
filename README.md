@@ -1,1 +1,6 @@
 # IceNET.AI
+
+### Minmum dependencies ###
+
+
+

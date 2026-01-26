@@ -1,0 +1,17 @@
+# ninja log v5
+3	34	1769392874510144520	app_autogen/timestamp	5d691604927533f9
+3	34	1769392874510144520	app_autogen/mocs_compilation.cpp	5d691604927533f9
+273	2008	1769392851497711290	CMakeFiles/app.dir/app_autogen/mocs_compilation.cpp.o	edfc84ecb68fba66
+3	34	1769392874510144520	/ice/code.lab/IceNET/IceNET.AI/app/build/app_autogen/timestamp	5d691604927533f9
+36	1689	1769392862607921298	CMakeFiles/app.dir/main.cpp.o	d2e53290691919a3
+3	34	1769392874510144520	/ice/code.lab/IceNET/IceNET.AI/app/build/app_autogen/mocs_compilation.cpp	5d691604927533f9
+35	1631	1769392876108174355	CMakeFiles/app.dir/src/gui.cpp.o	fa4c5aacab4d5e87
+1631	1963	1769392876437180493	app	7a4b865594e6cf5a
+3	235	1769392974288949706	app_autogen/timestamp	5d691604927533f9
+3	235	1769392974288949706	app_autogen/mocs_compilation.cpp	5d691604927533f9
+3	235	1769392974288949706	/ice/code.lab/IceNET/IceNET.AI/app/build/app_autogen/timestamp	5d691604927533f9
+3	235	1769392974288949706	/ice/code.lab/IceNET/IceNET.AI/app/build/app_autogen/mocs_compilation.cpp	5d691604927533f9
+236	2274	1769392976335985593	CMakeFiles/app.dir/src/gui.cpp.o	fa4c5aacab4d5e87
+235	2353	1769392976414986977	CMakeFiles/app.dir/app_autogen/mocs_compilation.cpp.o	edfc84ecb68fba66
+235	2561	1769392976622990621	CMakeFiles/app.dir/main.cpp.o	d2e53290691919a3
+2561	2877	1769392976935996105	app	7a4b865594e6cf5a
