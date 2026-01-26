@@ -4,7 +4,6 @@
 
 #include <QPlainTextEdit>
 #include <QApplication>
-#include <QSerialPort>
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QMessageBox>
@@ -27,11 +26,18 @@
 #include <mutex>
 #include <cmath>
 
+#include "guiTypes.h"
+
 class gui : public QWidget
 {
     Q_OBJECT
 
+    QPlainTextEdit *m_mainConsole;
+
 private slots:
+
+    void setupWindow();
+    void setupMainConsole();
 
 public:
 

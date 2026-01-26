@@ -1,5 +1,0 @@
-/ice/code.lab/IceNET/IceNET.AI/app/build/CMakeFiles/app.dir
-/ice/code.lab/IceNET/IceNET.AI/app/build/CMakeFiles/edit_cache.dir
-/ice/code.lab/IceNET/IceNET.AI/app/build/CMakeFiles/rebuild_cache.dir
-/ice/code.lab/IceNET/IceNET.AI/app/build/CMakeFiles/app_autogen_timestamp_deps.dir
-/ice/code.lab/IceNET/IceNET.AI/app/build/CMakeFiles/app_autogen.dir
