@@ -28,8 +28,7 @@ gui::gui()
     std::cout << "[MAIN] [CONSTRUCTOR] " << this << " :: gui" << std::endl;
 
     setupWindow();
-    // setupMainConsole();
-    // setupFlashInterface();
+    setupFlashInterface();
 }
 
 gui::~gui()
@@ -40,46 +39,63 @@ gui::~gui()
 void gui::setupWindow()
 {
     setWindowTitle("IceNET AI Drone Platform");
-    setFixedSize(w.xWindow, w.yWindow);\
     setStyleSheet(main_window_style);
 
     QTabWidget *tabs = new QTabWidget(this);
     tabs->setTabPosition(QTabWidget::West);
+    tabs->tabBar()->setShape(QTabBar::RoundedWest);
     tabs->setStyleSheet(tab_style);
-    tabs->setGeometry(w.xGap, w.yGap, w.xWindow - w.xGap*2, w.yWindow - w.yGap*2);
 
-    QWidget *flash = new QWidget();
-    QWidget *config = new QWidget();
-    QWidget *comms = new QWidget();
+    m_flash  = new QWidget();
+    m_config = new QWidget();
+    m_comms  = new QWidget();
 
-    tabs->addTab(flash, "FLASH");
-    tabs->addTab(config, "CONFIG");
-    tabs->addTab(comms, "COMMS");
+    tabs->addTab(m_flash, "FLASH");
+    tabs->addTab(m_config, "CONFIG");
+    tabs->addTab(m_comms, "COMMS");
+
+    /* Main Console :: Right Layout */
+    setupMainConsole();
+    QVBoxLayout *rightLayout = new QVBoxLayout();
+    rightLayout->addWidget(m_mainConsole);
+
+    /* Tabs :: Left Layout ---> Merge Layouts */
+    QHBoxLayout *mainLayout = new QHBoxLayout(this);
+    mainLayout->addWidget(tabs, 2);
+    mainLayout->addLayout(rightLayout, 1);
+
+    setLayout(mainLayout);
+
+    /* Multi-screen maximize workaround */
+    QScreen *screen = QGuiApplication::screenAt(QCursor::pos());
+    if (!screen)
+    {
+        screen = QGuiApplication::primaryScreen();
+    }
+
+    QRect geom = screen->availableGeometry();
+    this->setGeometry(geom);
+    this->show();
 }
+
 
 void gui::setupMainConsole()
 {
-    m_mainConsole = new QPlainTextEdit(this);
+    m_mainConsole = new QPlainTextEdit(this); // <-- parent = main window
     m_mainConsole->setReadOnly(true);
-    m_mainConsole->setGeometry(c.xPosition, c.yPosition, c.xSize, c.ySize);
 
     QFont consoleFont;
     consoleFont.setFamily("Courier");
-    consoleFont.setPointSize(9);
-    consoleFont.setBold(false);
+    consoleFont.setPointSize(10);
+    consoleFont.setStyleHint(QFont::Monospace);
+    consoleFont.setFixedPitch(true);
 
     m_mainConsole->setFont(consoleFont);
-
+    m_mainConsole->setStyleSheet(console_style);
     m_mainConsole->setPlainText("[INIT] Main Console Initialized...");
 }
 
 void gui::setupFlashInterface()
 {
-    QLabel *reset_label = new QLabel("Fx3 Flash", this);
-    QFont reset_labelFont;
-    reset_labelFont.setFamily("Courier");
-    reset_labelFont.setPointSize(20);
-    reset_labelFont.setBold(true);
-    reset_label->setFont(reset_labelFont);
-    reset_label->setGeometry(w.xGap, w.yGap, w.xLogo, w.yLogo);
+    /* TODO :: NEXT */
 }

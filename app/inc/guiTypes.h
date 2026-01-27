@@ -87,3 +87,13 @@ R"(
         color: #fdf6e3;       /* bright selected text */
     }
 )";
+
+static constexpr const char* console_style =
+R"(
+    QPlainTextEdit {
+        background-color: #073642;   /* brighter than main bg */
+        color: #839496;              /* Solarized base text */
+        border: 1px solid #586e75;  /* subtle border */
+        selection-background-color: #586e75;
+    }
+)";

@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <QGuiApplication>
 #include <QPlainTextEdit>
 #include <QApplication>
 #include <QPushButton>
@@ -17,6 +18,10 @@
 #include <QWidget>
 #include <QObject>
 #include <QThread>
+#include <QTabBar>
+#include <QWindow>
+#include <QScreen>
+#include <QCursor>
 #include <QDebug>
 #include <QImage>
 #include <QLabel>
@@ -34,6 +39,10 @@ class gui : public QWidget
     Q_OBJECT
 
     QPlainTextEdit *m_mainConsole;
+
+    QWidget *m_flash;
+    QWidget *m_config;
+    QWidget *m_comms;
 
 private slots:
 
