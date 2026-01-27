@@ -2,8 +2,10 @@
 
 #pragma once
 
+#include <QSystemSemaphore>
 #include <QGuiApplication>
 #include <QPlainTextEdit>
+#include <QSharedMemory>
 #include <QApplication>
 #include <QPushButton>
 #include <QVBoxLayout>
