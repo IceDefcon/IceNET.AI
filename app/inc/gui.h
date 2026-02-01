@@ -42,15 +42,28 @@ class gui : public QWidget
 
     QPlainTextEdit *m_mainConsole;
 
-    QWidget *m_flash;
-    QWidget *m_config;
-    QWidget *m_comms;
+    QWidget *m_devicePanel;
+    QWidget *m_descPanel;
+    QWidget *m_flashPanel;
+    QWidget *m_extensPanel;
+    QWidget *m_commsPanel;
+
+    QVBoxLayout *m_deviceLayout;
+    QVBoxLayout *m_descLayout;
+    QVBoxLayout *m_flashLayout;
+    QVBoxLayout *m_extensLayout;
+    QVBoxLayout *m_commsLayout;
 
 private slots:
 
     void setupWindow();
     void setupMainConsole();
+    void setupDeviceInterface();
+
+    void setupDescriptorsInterface();
     void setupFlashInterface();
+    void setupExtensionsInterface();
+    void setupCommunicationInterface();
 
 public:
 
