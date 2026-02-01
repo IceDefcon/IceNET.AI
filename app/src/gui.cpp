@@ -1,6 +1,5 @@
-/* IceNET Technology 2026 */
+/* IceNET Robotics 2026 */
 
-#include <iostream>
 #include "gui.h"
 
 static const mainWindowType w =
@@ -9,18 +8,19 @@ static const mainWindowType w =
     .yWindow = 750,
     .xGap = 5,
     .yGap = 5,
-    .xLogo = 200,
+    .xLogo = 300,
     .yLogo = 50,
-    .xUnit = 200,
+    .xUnit = 100,
     .yUnit = 25,
 };
 
-gui::gui()
+gui::gui() :
+m_usbDevicesDetected(0)
 {
-    std::cout << "[MAIN] [CONSTRUCTOR] " << this << " :: gui" << std::endl;
+    std::cout << "[INFO] [CONSTRUCTOR] " << this << " :: " << __PRETTY_FUNCTION__ << std::endl;
 
     setupWindow();
-    setupDeviceInterface();
+    setupUsbDevices();
 
     setupDescriptorsInterface();
     setupFlashInterface();
@@ -28,9 +28,11 @@ gui::gui()
     setupCommunicationInterface();
 }
 
-gui::~gui()
+gui::~gui() /* implicitly virtual because QWidget::~QWidget() is virtual */
 {
-    std::cout << "[MAIN] [DESTRUCTOR] " << this << " :: gui" << std::endl;
+    std::cout << "[INFO] [DESTRUCTOR] " << this << " :: " << __PRETTY_FUNCTION__ << std::endl;
+
+    m_usbDevicesDetected = 0;
 }
 
 void gui::setupWindow()
@@ -84,7 +86,6 @@ void gui::setupWindow()
     this->show();
 }
 
-
 void gui::setupMainConsole()
 {
     m_mainConsole = new QPlainTextEdit(this); // <-- parent = main window
@@ -98,48 +99,55 @@ void gui::setupMainConsole()
 
     m_mainConsole->setFont(consoleFont);
     m_mainConsole->setStyleSheet(console_style);
-    m_mainConsole->setPlainText("[INIT] Main Console Initialized...");
+    m_mainConsole->setPlainText("$ [INIT] Main Console Initialized...");
+
+    m_instanceConsole = std::make_shared<console>(m_mainConsole);
 }
 
-int usbDevicesDetected;
-
-void gui::setupDeviceInterface()
+void gui::setupUsbDevices()
 {
     uint32_t xBase = w.xGap;
     uint32_t yBase = w.yGap;
 
+    QFont commonLabelFont;
     QLabel *commonLabel = new QLabel("USB FX3 Devices", m_devicePanel);
     commonLabel->setGeometry(xBase, yBase, w.xLogo, w.yLogo);
+    commonLabelFont.setPointSize(20);
+    commonLabelFont.setBold(true);
+    commonLabel->setFont(commonLabelFont);
     commonLabel->show();
 
-    QPushButton *openLibButton = new QPushButton("OPEN LIB", m_devicePanel);
+    QPushButton *openLibButton = new QPushButton("REGISTER", m_devicePanel);
     openLibButton->setGeometry(xBase, yBase + w.yGap + w.yLogo, w.xUnit, w.yUnit);
     openLibButton->show();
 
-    connect(openLibButton, &QPushButton::clicked, this, &gui::openUsbLibrary);
-
+    connect(openLibButton, &QPushButton::clicked, this, &gui::registerUsbDevices);
 }
 
-
-void gui::openUsbLibrary()
+void gui::registerUsbDevices()
 {
     int cyusb = cyusb_open();
 
     if (cyusb < 0)
     {
-        std::cerr << "[ERROR] Error opening Library" << std::endl;
+        m_instanceConsole->printConsole(ERNO, "Error opening Library");
     }
     else if (cyusb == 0)
     {
-        std::cout << "[WARN] No device found" << std::endl;
+        m_instanceConsole->printConsole(WARN, "No device found");
     }
     else
     {
-        std::cout << "[INFO] Found USB Device: " << cyusb << std::endl;
-        usbDevicesDetected = cyusb;
+        m_instanceConsole->printConsole(INFO, "Found USB Device: " + QString::number(cyusb));
+        m_usbDevicesDetected = cyusb;
+    }
+
+    if(m_usbDevicesDetected > 0)
+    {
+        m_instanceConsole->printConsole(TODO, "Only one USB Device Supported :: Interface(0)");
+        m_instanceUsbDevice = std::make_unique<device>(m_instanceConsole);
     }
 }
-
 
 void gui::setupDescriptorsInterface()
 {
@@ -147,7 +155,7 @@ void gui::setupDescriptorsInterface()
     uint32_t yBase = w.yGap;
 
     QLabel *descLabel = new QLabel("USB Descriptors", m_descPanel);
-    descLabel->setGeometry(xBase, yBase, w.xUnit, w.yUnit);
+    descLabel->setGeometry(xBase, yBase, w.xLogo, w.yLogo);
     descLabel->show();
 }
 
@@ -157,7 +165,7 @@ void gui::setupFlashInterface()
     uint32_t yBase = w.yGap;
 
     QLabel *flashLabel = new QLabel("Fx3 Flash Interface", m_flashPanel);
-    flashLabel->setGeometry(xBase, yBase, w.xUnit, w.yUnit);
+    flashLabel->setGeometry(xBase, yBase, w.xLogo, w.yLogo);
     flashLabel->show();
 }
 
@@ -167,7 +175,7 @@ void gui::setupExtensionsInterface()
     uint32_t yBase = w.yGap;
 
     QLabel *extLabel = new QLabel("Vecdor Extensions", m_extensPanel);
-    extLabel->setGeometry(xBase, yBase, w.xUnit, w.yUnit);
+    extLabel->setGeometry(xBase, yBase, w.xLogo, w.yLogo);
     extLabel->show();
 }
 
@@ -177,6 +185,6 @@ void gui::setupCommunicationInterface()
     uint32_t yBase = w.yGap;
 
     QLabel *commsLabel = new QLabel("USB Communication", m_commsPanel);
-    commsLabel->setGeometry(xBase, yBase, w.xUnit, w.yUnit);
+    commsLabel->setGeometry(xBase, yBase, w.xLogo, w.yLogo);
     commsLabel->show();
 }

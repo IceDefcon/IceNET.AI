@@ -1,4 +1,4 @@
-/* IceNET Technology 2026 */
+/* IceNET Robotics 2026 */
 
 #include <iostream>
 
@@ -23,14 +23,16 @@ int main(int argc, char *argv[])
     if (multipleInstances())
     {
         qWarning() << "Another instance is already running!";
-        qWarning() << "Please check manually: 'ipcs -m' and 'ipcs -s'";
-        qWarning() << "And Remove if needed: 'ipcrm -m <shmid>' and 'ipcrm -s <semid>'";
+        qWarning() << "Use 'ipcs -m' to check for Shared Memory Segments";
+        qWarning() << "Use 'ipcs -s' to check for Semaphore Arrays";
+        qWarning() << "'Use 'ipcrm -m <shmid>' to remove Shared Memory";
+        qWarning() << "'Use 'ipcrm -s <semid>' to remove Semaphore";
 
         return 1;
     }
 
-    gui window;
-    window.show();
+    auto window = std::make_unique<gui>();
+    window->show();
 
     return app.exec();
 }

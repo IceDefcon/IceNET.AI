@@ -1,4 +1,4 @@
-/* IceNET Technology 2026 */
+/* IceNET Robotics 2026 */
 
 #pragma once
 
@@ -15,6 +15,7 @@
 #include <QLineEdit>
 #include <QCheckBox>
 #include <QPainter>
+#include <QPointer>
 #include <QPixmap>
 #include <QDialog>
 #include <QWidget>
@@ -30,18 +31,20 @@
 #include <QTimer>
 #include <QFont>
 
+#include <iostream>
+#include <memory>
+#include <chrono>
 #include <thread>
 #include <mutex>
 #include <cmath>
 
+#include "device.h"
+#include "console.h"
 #include "guiTypes.h"
-#include "cyusb.h"
 
 class gui : public QWidget
 {
     Q_OBJECT
-
-    QPlainTextEdit *m_mainConsole;
 
     QWidget *m_devicePanel;
     QWidget *m_descPanel;
@@ -49,14 +52,20 @@ class gui : public QWidget
     QWidget *m_extensPanel;
     QWidget *m_commsPanel;
 
+    QPlainTextEdit *m_mainConsole;
+    std::shared_ptr<console> m_instanceConsole;
+
+    int m_usbDevicesDetected;
+    std::unique_ptr<device> m_instanceUsbDevice;
+
 private slots:
 
     void setupWindow();
     void setupMainConsole();
-    void setupDeviceInterface();
+    // void printConsole(consoleType type, const QString &message);
 
-    void openUsbLibrary();
-
+    void setupUsbDevices();
+    void registerUsbDevices();
 
     void setupDescriptorsInterface();
     void setupFlashInterface();
@@ -66,7 +75,7 @@ private slots:
 public:
 
     gui();
-    ~gui();
+    ~gui();  /* implicitly virtual because QWidget::~QWidget() is virtual */
 
 private slots:
 
