@@ -47,7 +47,7 @@ target_include_directories(cyusb PUBLIC
 ##########################################################################
 # -l usb-1.0 -l rt
 ##########################################################################
-target_link_libraries(cyusb PRIVATE
+target_link_libraries(cyusb PUBLIC
     usb-1.0
     rt
 )

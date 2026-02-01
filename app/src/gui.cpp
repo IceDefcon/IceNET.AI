@@ -60,8 +60,8 @@ void gui::setupWindow()
 
     /* Left layout: device panel on top, tabs below */
     QVBoxLayout *leftLayout = new QVBoxLayout();
-    leftLayout->addWidget(m_devicePanel, 1); // top
-    leftLayout->addWidget(tabs, 4);         // bottom (bigger)
+    leftLayout->addWidget(m_devicePanel, 1);
+    leftLayout->addWidget(tabs, 4);
 
     /* Right layout: main console */
     setupMainConsole();
