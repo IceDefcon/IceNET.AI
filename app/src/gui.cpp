@@ -11,7 +11,7 @@ static const mainWindowType w =
     .yGap = 5,
     .xLogo = 200,
     .yLogo = 50,
-    .xUnit = 50,
+    .xUnit = 200,
     .yUnit = 25,
 };
 
@@ -38,18 +38,14 @@ void gui::setupWindow()
     setWindowTitle("IceNET AI Drone Platform");
     setStyleSheet(main_window_style);
 
+    /* Create panels (no layouts inside) */
     m_devicePanel = new QWidget();
     m_descPanel   = new QWidget();
     m_flashPanel  = new QWidget();
     m_extensPanel = new QWidget();
     m_commsPanel  = new QWidget();
 
-    m_deviceLayout = new QVBoxLayout(m_devicePanel);
-    m_descLayout   = new QVBoxLayout(m_descPanel);
-    m_flashLayout  = new QVBoxLayout(m_flashPanel);
-    m_extensLayout = new QVBoxLayout(m_extensPanel);
-    m_commsLayout  = new QVBoxLayout(m_commsPanel);
-
+    /* Tab widget for bottom panels */
     QTabWidget *tabs = new QTabWidget();
     tabs->setTabPosition(QTabWidget::West);
     tabs->tabBar()->setShape(QTabBar::RoundedWest);
@@ -57,22 +53,23 @@ void gui::setupWindow()
 
     tabs->addTab(m_descPanel,   "   DESCRIPTORS   ");
     tabs->addTab(m_flashPanel,  "      FLASH      ");
-    tabs->addTab(m_extensPanel, "       EXT       ");
+    tabs->addTab(m_extensPanel, "   EXTENSIONS   ");
     tabs->addTab(m_commsPanel,  "      COMMS      ");
 
+    /* Left layout: device panel on top, tabs below */
     QVBoxLayout *leftLayout = new QVBoxLayout();
-    leftLayout->addWidget(m_devicePanel, 1);  // top
+    leftLayout->addWidget(m_devicePanel, 1); // top
     leftLayout->addWidget(tabs, 4);         // bottom (bigger)
 
+    /* Right layout: main console */
     setupMainConsole();
-
     QVBoxLayout *rightLayout = new QVBoxLayout();
     rightLayout->addWidget(m_mainConsole);
 
+    /* Main window layout: left + right */
     QHBoxLayout *mainLayout = new QHBoxLayout(this);
     mainLayout->addLayout(leftLayout, 2);
     mainLayout->addLayout(rightLayout, 1);
-
     setLayout(mainLayout);
 
     /* Multi-screen maximize workaround */
@@ -104,37 +101,82 @@ void gui::setupMainConsole()
     m_mainConsole->setPlainText("[INIT] Main Console Initialized...");
 }
 
+int usbDevicesDetected;
+
 void gui::setupDeviceInterface()
 {
-    QLabel *commonLabel = new QLabel("Common Interface Area");
-    m_deviceLayout->addWidget(commonLabel);
-    m_deviceLayout->addStretch();
+    uint32_t xBase = w.xGap;
+    uint32_t yBase = w.yGap;
+
+    QLabel *commonLabel = new QLabel("USB FX3 Devices", m_devicePanel);
+    commonLabel->setGeometry(xBase, yBase, w.xLogo, w.yLogo);
+    commonLabel->show();
+
+    QPushButton *openLibButton = new QPushButton("OPEN LIB", m_devicePanel);
+    openLibButton->setGeometry(xBase, yBase + w.yGap + w.yLogo, w.xUnit, w.yUnit);
+    openLibButton->show();
+
+    connect(openLibButton, &QPushButton::clicked, this, &gui::openUsbLibrary);
+
 }
+
+
+void gui::openUsbLibrary()
+{
+    int cyusb = cyusb_open();
+
+    if (cyusb < 0)
+    {
+        std::cerr << "[ERROR] Error opening Library" << std::endl;
+    }
+    else if (cyusb == 0)
+    {
+        std::cout << "[WARN] No device found" << std::endl;
+    }
+    else
+    {
+        std::cout << "[INFO] Found USB Device: " << cyusb << std::endl;
+        usbDevicesDetected = cyusb;
+    }
+}
+
 
 void gui::setupDescriptorsInterface()
 {
-    QLabel *flashLabel = new QLabel("USB Descriptions");
-    m_descLayout->addWidget(flashLabel);
-    m_descLayout->addStretch();
+    uint32_t xBase = w.xGap;
+    uint32_t yBase = w.yGap;
+
+    QLabel *descLabel = new QLabel("USB Descriptors", m_descPanel);
+    descLabel->setGeometry(xBase, yBase, w.xUnit, w.yUnit);
+    descLabel->show();
 }
 
 void gui::setupFlashInterface()
 {
-    QLabel *flashLabel = new QLabel("Fx3 Interface");
-    m_flashLayout->addWidget(flashLabel);
-    m_flashLayout->addStretch();
+    uint32_t xBase = w.xGap;
+    uint32_t yBase = w.yGap;
+
+    QLabel *flashLabel = new QLabel("Fx3 Flash Interface", m_flashPanel);
+    flashLabel->setGeometry(xBase, yBase, w.xUnit, w.yUnit);
+    flashLabel->show();
 }
 
 void gui::setupExtensionsInterface()
 {
-    QLabel *flashLabel = new QLabel("Vecdor Extensions");
-    m_extensLayout->addWidget(flashLabel);
-    m_extensLayout->addStretch();
+    uint32_t xBase = w.xGap;
+    uint32_t yBase = w.yGap;
+
+    QLabel *extLabel = new QLabel("Vecdor Extensions", m_extensPanel);
+    extLabel->setGeometry(xBase, yBase, w.xUnit, w.yUnit);
+    extLabel->show();
 }
 
 void gui::setupCommunicationInterface()
 {
-    QLabel *flashLabel = new QLabel("USB Communications");
-    m_commsLayout->addWidget(flashLabel);
-    m_commsLayout->addStretch();
+    uint32_t xBase = w.xGap;
+    uint32_t yBase = w.yGap;
+
+    QLabel *commsLabel = new QLabel("USB Communication", m_commsPanel);
+    commsLabel->setGeometry(xBase, yBase, w.xUnit, w.yUnit);
+    commsLabel->show();
 }

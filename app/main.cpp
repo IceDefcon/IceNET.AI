@@ -1,5 +1,7 @@
 /* IceNET Technology 2026 */
 
+#include <iostream>
+
 #include "gui.h"
 
 static QSystemSemaphore semaphore("IceNETSemaphore", 1);

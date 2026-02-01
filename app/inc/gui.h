@@ -35,6 +35,7 @@
 #include <cmath>
 
 #include "guiTypes.h"
+#include "cyusb.h"
 
 class gui : public QWidget
 {
@@ -48,17 +49,14 @@ class gui : public QWidget
     QWidget *m_extensPanel;
     QWidget *m_commsPanel;
 
-    QVBoxLayout *m_deviceLayout;
-    QVBoxLayout *m_descLayout;
-    QVBoxLayout *m_flashLayout;
-    QVBoxLayout *m_extensLayout;
-    QVBoxLayout *m_commsLayout;
-
 private slots:
 
     void setupWindow();
     void setupMainConsole();
     void setupDeviceInterface();
+
+    void openUsbLibrary();
+
 
     void setupDescriptorsInterface();
     void setupFlashInterface();
