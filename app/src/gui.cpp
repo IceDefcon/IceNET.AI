@@ -75,14 +75,14 @@ void gui::setupWindow()
     setLayout(mainLayout);
 
     /* Multi-screen maximize workaround */
-    QScreen *screen = QGuiApplication::screenAt(QCursor::pos());
+    QScreen *screen = QGuiApplication::primaryScreen();
+
     if (!screen)
     {
-        screen = QGuiApplication::primaryScreen();
+        return;
     }
 
-    QRect geom = screen->availableGeometry();
-    this->setGeometry(geom);
+    this->setGeometry(screen->availableGeometry());
     this->show();
 }
 

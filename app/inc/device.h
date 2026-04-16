@@ -3,6 +3,7 @@
 #pragma once
 
 #include <iostream>
+#include <memory>
 
 #include "cyusb.h" /* Cypress Library */
 #include "console.h"
