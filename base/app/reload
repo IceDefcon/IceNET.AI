@@ -1,0 +1,3 @@
+qmake controlcenter.pro
+make clean
+make -j
