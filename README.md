@@ -39,4 +39,3 @@ export PATH=$CYUSB_ROOT/bin:$PATH
 ### Author ###
 
 Marek Funtowicz 
-
