@@ -36,6 +36,25 @@ export CYUSB_ROOT=/home/marek/code.lab/fx3/ezusbfx3sdk_1.3.5_Linux_x32-x64/cyusb
 export LD_LIBRARY_PATH=$CYUSB_ROOT/lib:$LD_LIBRARY_PATH
 export PATH=$CYUSB_ROOT/bin:$PATH
 
+### Jupmers ###
+
+By default all Jumpers are shorted
+
+Jumper      Name / Function                 Shorted Effect                  Result on Board Behavior
+-----------------------------------------------------------------------------------------------------------------------------
+J2          I/O voltage select              Forces 3.3 V I/O mode           Safe default GPIF/GPIO levels (3.3 V logic)
+J3          Power selection / VBUS link     Board powered from USB          Normal USB-powered operation
+J4          Boot mode select (PMODE)        Forces USB bootloader mode      EEPROM firmware ignored; device enters recovery/boot mode
+J5          SRAM enable                     Connects external SRAM          SRAM becomes active in hardware (only used if firmware supports it)
+
+### Instruction ###
+
+1. Load :: cyfxbulklpautoenum.img
+2. Close Base Application
+3. Open Base Application
+4. Load Destriptors
+5. Enjoy xD
+
 ### Author ###
 
-Marek Funtowicz 
+IceDefcon
