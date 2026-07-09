@@ -1,0 +1,1 @@
+./../../../util/elf2img/elf2img -i cyfxbulklpautoenum.elf -o cyfxbulklpautoenum.img -v

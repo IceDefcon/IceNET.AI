@@ -76,11 +76,19 @@ set MAX_O_DELAY_50MHz  8.0
 # Indicating the earliest time the signal can change after the clock edge
 set MIN_O_DELAY_50MHz  3.0
 
+# It means that output signals can change no later than 3.0 ns after the rising edge of CLOCK_133MHz
+set MAX_O_DELAY_100MHz 3.0
+# The output can change no sooner than 1.0 ns after the rising edge of CLOCK_133MHz
+set MIN_O_DELAY_100MHz 1.0
+set MAX_I_DELAY_100MHz 3.0
+set MIN_I_DELAY_100MHz 1.0
+
 ###########################################################################################################################
 # Clock 50MHz :: Base
 ###########################################################################################################################
 
 create_clock -name CLOCK_MAIN -period 20.000 [get_ports CLOCK]
+create_clock -name CLOCK_100 -period 10.000
 
 derive_pll_clocks
 derive_clock_uncertainty
@@ -103,3 +111,46 @@ set_input_delay -clock CLOCK_MAIN -min $MIN_I_DELAY_50MHz [get_ports {BUTTON_1 B
 # LED outputs
 set_output_delay -clock CLOCK_MAIN -max $MAX_O_DELAY_50MHz [get_ports {LED_1 LED_2 LED_3 LED_4 LED_5 LED_6 LED_7 LED_8}]
 set_output_delay -clock CLOCK_MAIN -min $MIN_O_DELAY_50MHz [get_ports {LED_1 LED_2 LED_3 LED_4 LED_5 LED_6 LED_7 LED_8}]
+
+###########################################################################################################################
+# GPIF 2 Interface Constraints (100MHz domain)
+###########################################################################################################################
+
+# GPIF Control Inputs (FX3 → FPGA)
+set_input_delay -clock CLOCK_100 -max $MAX_I_DELAY_100MHz [get_ports {GPIF_CTL4 GPIF_CTL5 GPIF_CTL6 GPIF_CTL8 GPIF_CTL9}]
+
+set_input_delay -clock CLOCK_100 -min $MIN_I_DELAY_100MHz [get_ports {GPIF_CTL4 GPIF_CTL5 GPIF_CTL6 GPIF_CTL8 GPIF_CTL9}]
+
+
+###########################################################################################################################
+# GPIF Control Outputs (FPGA → FX3)
+###########################################################################################################################
+
+set_output_delay -clock CLOCK_100 -max $MAX_O_DELAY_100MHz [get_ports {GPIF_CTL0 GPIF_CTL1 GPIF_CTL2 GPIF_CTL3 GPIF_CTL7 GPIF_CTL11 GPIF_CTL12}]
+
+set_output_delay -clock CLOCK_100 -min $MIN_O_DELAY_100MHz [get_ports {GPIF_CTL0 GPIF_CTL1 GPIF_CTL2 GPIF_CTL3 GPIF_CTL7 GPIF_CTL11 GPIF_CTL12}]
+
+
+###########################################################################################################################
+# GPIF DATA BUS (INOUT) - IMPORTANT SECTION
+###########################################################################################################################
+
+# NOTE:
+# GPIF_D is bidirectional (inout)
+# So we must constrain BOTH directions, but carefully
+
+# FPGA receiving data (FX3 → FPGA)
+set_input_delay -clock CLOCK_100 -max $MAX_I_DELAY_100MHz [get_ports {GPIF_D[*]}]
+set_input_delay -clock CLOCK_100 -min $MIN_I_DELAY_100MHz [get_ports {GPIF_D[*]}]
+
+
+# FPGA driving data (FPGA → FX3)
+set_output_delay -clock CLOCK_100 -max $MAX_O_DELAY_100MHz [get_ports {GPIF_D[*]}]
+set_output_delay -clock CLOCK_100 -min $MIN_O_DELAY_100MHz [get_ports {GPIF_D[*]}]
+
+###########################################################################################################################
+# OPTIONAL (recommended for inout safety)
+###########################################################################################################################
+
+# Prevent false timing between opposite directions
+set_false_path -through [get_ports {GPIF_D[*]}]

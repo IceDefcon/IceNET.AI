@@ -1,0 +1,289 @@
+library ieee;
+use ieee.numeric_std.all;
+use ieee.std_logic_1164.all;
+
+-------------------------------------------------------------------------------------
+--
+-- Author: Ice.Marek
+-- IceNET Technology 2025
+--
+-------------------------------------------------------------------------------------
+--
+-- FPGA Pinout
+-- Cyclone IV
+-- EP4CE15F23C8
+--
+-------------------------------------------------------------------------------------
+--
+-- VIN     :: VIN
+-- GND     :: GND
+-- PIN_A20 :: PIN_B20
+-- PIN_A19 :: PIN_B19 
+-- PIN_A18 :: PIN_B18 
+-- PIN_A17 :: PIN_B17 
+-- PIN_A16 :: PIN_B16 
+-- PIN_A15 :: PIN_B15 
+-- PIN_A14 :: PIN_B14 
+-- PIN_A13 :: PIN_B13 
+-- PIN_A10 :: PIN_B10 
+-- PIN_A9  :: PIN_B9  
+-- PIN_A8  :: PIN_B8  
+-- PIN_A7  :: PIN_B7  
+-- PIN_A6  :: PIN_B6  
+-- PIN_A5  :: PIN_B5  
+-- PIN_C3  :: PIN_C4  
+-- PIN_A4  :: PIN_B4  
+-- PIN_A3  :: PIN_B3  
+-- PIN_B2  :: PIN_B1  
+-- PIN_C2  :: PIN_C1
+-- PIN_D2  :: PIN_E1
+-- PIN_F2  :: PIN_F1
+-- PIN_H2  :: PIN_H1
+-- PIN_J2  :: PIN_J1
+-- PIN_M2  :: PIN_M1
+-- PIN_N2  :: PIN_N1
+-- PIN_P2  :: PIN_P1
+-- PIN_R2  :: PIN_R1
+-- GND     :: GND
+-- 3V3     :: 3V3
+-- GND     :: GND
+--
+-------------------------------------------------------------------------------------
+--
+-- VIN      :: VIN
+-- GND      :: GND
+-- PIN_M19  :: PIN_M20
+-- PIN_N19  :: PIN_N20
+-- PIN_B21  :: PIN_B22
+-- PIN_C21  :: PIN_C22
+-- PIN_D21  :: PIN_D22
+-- PIN_E21  :: PIN_E22
+-- PIN_F21  :: PIN_F22
+-- PIN_H21  :: PIN_H22
+-- PIN_J21  :: PIN_J22
+-- PIN_K21  :: PIN_K22
+-- PIN_L21  :: PIN_L22
+-- PIN_M21  :: PIN_M22
+-- PIN_N21  :: PIN_N22
+-- PIN_P21  :: PIN_P22
+-- PIN_R21  :: PIN_R22
+-- PIN_U21  :: PIN_U22
+-- PIN_V21  :: PIN_V22
+-- PIN_W21  :: PIN_W22
+-- PIN_Y21  :: PIN_Y22
+-- PIN_AB20 :: PIN_AA20
+-- PIN_AB19 :: PIN_AA19
+-- PIN_AB18 :: PIN_AA18
+-- PIN_AB17 :: PIN_AA17
+-- PIN_AB16 :: PIN_AA16
+-- PIN_AB15 :: PIN_AA15
+-- PIN_AB14 :: PIN_AA14
+-- PIN_AB13 :: PIN_AA13
+-- GND      :: GND
+-- 3V3      :: 3V3
+-- GND      :: GND
+--
+-------------------------------------------------------------------------------------
+--
+-- FPGA Pinout
+-- Cyclone IV
+-- EP4CE15F23C8
+--
+-------------------------------------------------------------------------------------
+--
+-- V3P3  :: V1P2        |
+-- VBUS  :: VBUS        |
+-- GND   :: GND         |
+-- CTL12 :: DQ15        | A0        :: DQ[15]
+-- CTL11 :: DQ14        | A1        :: DQ[14]
+-- CTL10 :: DQ13        | GPIO      :: DQ[13]
+-- CTL9  :: DQ12        | GPIO      :: DQ[12]
+-- CTL8  :: DQ11        | GPIO      :: DQ[11]
+-- CTL7  :: DQ10        | PKTEND#   :: DQ[10]
+-- CTL6  :: DQ9         | GPIO      :: DQ[9]
+-- CTL5  :: DQ8         | FLAGB     :: DQ[8]
+-- CTL4  :: DQ7         | FLAGA     :: DQ[7]
+-- CTL3  :: DQ6         | SLRD#     :: DQ[6]
+-- CTL2  :: DQ5         | SLOE#     :: DQ[5]
+-- CTL1  :: DQ4         | SLWR#     :: DQ[4]
+-- CTL0  :: DQ3         | SLCS#     :: DQ[3]
+-- GND   :: DQ2         | GND       :: DQ[2]
+-- PCLK  :: DQ1         |           :: DQ[1]
+-- GND   :: DQ0         |           :: DQ[0]
+-- SDA   :: SCL         |
+--
+-------------------------------------------------------------------------------------
+--
+-- V3P3     :: V1P2     |
+-- CTL15    :: VIO      |
+-- NC       :: DQ31     |
+-- PM_2     :: DQ30     | PMODE[2]
+-- PM_1     :: DQ29     | PMODE[1]
+-- PM_0     :: DQ28     | PMODE[0]
+-- GND      :: IO45     |
+-- GND      :: DQ27     |
+-- GND      :: DQ26     |
+-- Rx/MOSI  :: DQ25     |
+-- Tx/MISO  :: DQ24     |
+-- CTS/SSN  :: DQ23     |
+-- GND      :: DQ22     |
+-- RTS/SCK  :: DQ21     |
+-- GND      :: DQ20     |
+-- I2S_WS   :: DQ19     |
+-- I2S_SD   :: DQ18     |
+-- I2S_MCLK :: DQ17     |
+-- I2S_CLK  :: DQ16     |
+-- GND      :: GND      |
+--
+-------------------------------------------------------------------------------------
+
+
+
+
+entity IceNET_AI_Platform is
+port
+(
+    RESET : in std_logic; -- PIN_E4
+    CLOCK : in std_logic; -- PIN_T2
+
+    ----------------------------------------------------------------------------------------------------------------
+    -- Debug Buttons
+    ----------------------------------------------------------------------------------------------------------------
+    BUTTON_1 : in std_logic; -- PIN_H20
+    BUTTON_2 : in std_logic; -- PIN_K19
+    BUTTON_3 : in std_logic; -- PIN_J18
+    BUTTON_4 : in std_logic; -- PIN_K18
+
+    ----------------------------------------------------------------------------------------------------------------
+    -- GPIF Data Bus
+    ----------------------------------------------------------------------------------------------------------------
+    -- PIN_A20 :: PIN_B20
+    -- PIN_A19 :: PIN_B19 
+    -- PIN_A18 :: PIN_B18 
+    -- PIN_A17 :: PIN_B17 
+    -- PIN_A16 :: PIN_B16 
+    -- PIN_A15 :: PIN_B15 
+    -- PIN_A14 :: PIN_B14 
+    -- PIN_A13 :: PIN_B13 
+    -- PIN_A10 :: PIN_B10 
+    -- PIN_A9  :: PIN_B9  
+    -- PIN_A8  :: PIN_B8  
+    -- PIN_A7  :: PIN_B7  
+    -- PIN_A6  :: PIN_B6  
+    -- PIN_A5  :: PIN_B5  
+    -- PIN_C3  :: PIN_C4  
+    -- PIN_A4  :: PIN_B4  
+    ----------------------------------------------------------------------------------------------------------------
+    GPIF_D : inout std_logic_vector(31 downto 0); -- PIN_A20..PIN_B4
+
+    ----------------------------------------------------------------------------------------------------------------
+    -- DEBUG LED's
+    ----------------------------------------------------------------------------------------------------------------
+    LED_1 : out std_logic; -- PIN_U7
+    LED_2 : out std_logic; -- PIN_U8
+    LED_3 : out std_logic; -- PIN_R7
+    LED_4 : out std_logic; -- PIN_T8
+    LED_5 : out std_logic; -- PIN_R8
+    LED_6 : out std_logic; -- PIN_P8
+    LED_7 : out std_logic; -- PIN_M8
+    LED_8 : out std_logic  -- PIN_N8
+);
+end IceNET_AI_Platform;
+
+architecture rtl of IceNET_AI_Platform is
+
+----------------------------------------------------------------------------------------------------------------
+-- Constatns, Types and Signals
+----------------------------------------------------------------------------------------------------------------
+
+
+signal timed_reset : std_logic := '0';
+
+----------------------------------------------------------------------------------------------------------------
+-- Mods
+----------------------------------------------------------------------------------------------------------------
+component TimedReset
+port
+(
+    RESET : in  std_logic;
+    CLOCK : in  std_logic;
+    TIMED_RESET : out std_logic
+);
+end component;
+
+--component DebounceController
+--generic
+--(
+--   PERIOD : integer := 50000; -- 50Mhz :: 50000*20ns = 1ms
+--   SM_OFFSET : integer := 3
+--);
+--port
+--(
+--   CLOCK : in  std_logic;
+--   RESET : in std_logic;
+
+--   BUTTON_IN : in  std_logic;
+--   BUTTON_OUT : out std_logic
+--);
+--end component;
+
+----------------------------------------------------------------------------------------------------------------
+-- Main Routine
+----------------------------------------------------------------------------------------------------------------
+begin
+
+TimedReset_mod: TimedReset
+port map
+(
+   RESET => RESET,
+   CLOCK => CLOCK,
+
+   TIMED_RESET => timed_reset
+);
+
+--ActiveDebug_Button: DebounceController
+--generic map
+--(
+--   PERIOD => 50000, -- 50Mhz :: 50000*20ns = 1ms
+--   SM_OFFSET => 3
+--)
+--port map
+--(
+--   CLOCK => CLOCK,
+--   RESET => timed_reset,
+
+--   BUTTON_IN => BUTTON_1,
+--   BUTTON_OUT => active_button_1
+--);
+
+DEBUG_1 <= '1';
+DEBUG_2 <= '0';
+
+debug_test_process:
+process(CLOCK)
+begin
+    if rising_edge(CLOCK) then
+        if timed_reset = '1' then
+            LED_1 <= '1';
+            LED_2 <= '1';
+            LED_3 <= '1';
+            LED_4 <= '1';
+            LED_5 <= '1';
+            LED_6 <= '1';
+            LED_7 <= '1';
+            LED_8 <= '1';
+        else
+            LED_1 <= '0';
+            LED_2 <= '0';
+            LED_3 <= '0';
+            LED_4 <= '0';
+            LED_5 <= '0';
+            LED_6 <= '0';
+            LED_7 <= '0';
+            LED_8 <= '0';
+
+        end if;
+    end if;
+end process;
+
+end rtl;
