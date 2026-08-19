@@ -128,24 +128,41 @@ void gui::registerUsbDevices()
 {
     int cyusb = cyusb_open();
 
+    m_instanceConsole->printConsole(
+        INFO,
+        "cyusb_open() returned = " + QString::number(cyusb)
+    );
+
     if (cyusb < 0)
     {
         m_instanceConsole->printConsole(ERNO, "Error opening Library");
     }
     else if (cyusb == 0)
     {
-        m_instanceConsole->printConsole(WARN, "No device found");
+        m_instanceConsole->printConsole(
+            WARN,
+            "No CyUSB device of interest detected"
+        );
     }
     else
     {
-        m_instanceConsole->printConsole(INFO, "Found USB Device: " + QString::number(cyusb));
+        m_instanceConsole->printConsole(
+            INFO,
+            "Found USB Device: " + QString::number(cyusb)
+        );
+
         m_usbDevicesDetected = cyusb;
     }
 
-    if(m_usbDevicesDetected > 0)
+    if (m_usbDevicesDetected > 0)
     {
-        m_instanceConsole->printConsole(TODO, "Only one USB Device Supported :: Interface(0)");
-        m_instanceUsbDevice = std::make_unique<device>(m_instanceConsole);
+        m_instanceConsole->printConsole(
+            TODO,
+            "Only one USB Device Supported :: Interface(0)"
+        );
+
+        m_instanceUsbDevice =
+            std::make_unique<device>(m_instanceConsole);
     }
 }
 

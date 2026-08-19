@@ -185,42 +185,15 @@ signal global_reset : std_logic := '0';
 signal gpif_rst     : std_logic := '0';
 
 ----------------------------------------------------------------------------------------------------------------
--- GPIF Streams
-----------------------------------------------------------------------------------------------------------------
-signal tx_tdata  : std_logic_vector(63 downto 0) := (others => '0');
-signal tx_tlast  : std_logic := '0';
-signal tx_tvalid : std_logic := '0';
-signal tx_tready : std_logic := '1';
-
-signal rx_tdata  : std_logic_vector(63 downto 0) := (others => '0');
-signal rx_tlast  : std_logic := '0';
-signal rx_tvalid : std_logic := '0';
-signal rx_tready : std_logic := '0';
-
-signal ctrl_tdata  : std_logic_vector(63 downto 0) := (others => '0');
-signal ctrl_tlast  : std_logic := '0';
-signal ctrl_tvalid : std_logic := '0';
-signal ctrl_tready : std_logic := '1';
-
-signal resp_tdata  : std_logic_vector(63 downto 0) := (others => '0');
-signal resp_tlast  : std_logic := '0';
-signal resp_tvalid : std_logic := '0';
-signal resp_tready : std_logic := '0';
-
-signal gpif_debug : std_logic_vector(31 downto 0) := (others => '0');
-
-----------------------------------------------------------------------------------------------------------------
 -- GPIF Receive Debug
 ----------------------------------------------------------------------------------------------------------------
-signal gpif_received_data    : std_logic_vector(63 downto 0) := (others => '0');
-signal gpif_received_last    : std_logic := '0';
-signal gpif_received_valid   : std_logic := '0';
-signal gpif_received_counter : unsigned(31 downto 0) := (others => '0');
+signal gpif_debug_data    : std_logic_vector(31 downto 0) := (others => '0');
+signal gpif_debug_valid   : std_logic := '0';
+signal gpif_debug_counter : std_logic_vector(31 downto 0) := (others => '0');
 
-signal gpif_ctrl_received_data    : std_logic_vector(63 downto 0) := (others => '0');
-signal gpif_ctrl_received_last    : std_logic := '0';
-signal gpif_ctrl_received_valid   : std_logic := '0';
-signal gpif_ctrl_received_counter : unsigned(31 downto 0) := (others => '0');
+signal gpif_debug_ready : std_logic := '0';
+signal gpif_debug_wmark : std_logic := '0';
+signal gpif_debug_state : std_logic_vector(3 downto 0) := (others => '0');
 
 ----------------------------------------------------------------------------------------------------------------
 -- PLL
@@ -278,65 +251,52 @@ port
 );
 end component;
 
-component gpif2_slave_fifo32
-    generic (
-        DATA_RX_FIFO_SIZE : integer := 12;
-        DATA_TX_FIFO_SIZE : integer := 12;
-        CTRL_RX_FIFO_SIZE : integer := 5;
-        CTRL_TX_FIFO_SIZE : integer := 5;
+component GPIF_II_Controller
+generic
+(
+    ADDR_DATA_TX : std_logic_vector(1 downto 0) := "00"
+);
+port
+(
+    GPIF_CLK : in std_logic;
+    GPIF_RST : in std_logic;
+    GPIF_ENB : in std_logic;
 
-        ADDR_DATA_TX : std_logic_vector(1 downto 0) := "00";
-        ADDR_DATA_RX : std_logic_vector(1 downto 0) := "01";
-        ADDR_CTRL_TX : std_logic_vector(1 downto 0) := "10";
-        ADDR_CTRL_RX : std_logic_vector(1 downto 0) := "11"
-    );
-    port (
-        -- GPIF signals
-        gpif_clk : in  std_logic;
-        gpif_rst : in  std_logic;
-        gpif_enb : in  std_logic;
-        gpif_d   : inout std_logic_vector(31 downto 0);
-        gpif_ctl : in  std_logic_vector(3 downto 0);
+    GPIF_D   : inout std_logic_vector(31 downto 0);
+    GPIF_CTL : in std_logic_vector(3 downto 0);
 
-        sloe    : out std_logic;
-        slrd    : out std_logic;
-        slwr    : out std_logic;
-        slcs    : out std_logic;
-        pktend  : out std_logic;
-        fifoadr : out std_logic_vector(1 downto 0);
+    SLOE    : out std_logic;
+    SLRD    : out std_logic;
+    SLWR    : out std_logic;
+    SLCS    : out std_logic;
+    PKTEND  : out std_logic;
+    FIFOADR : out std_logic_vector(1 downto 0);
 
-        -- FIFO interfaces
-        fifo_clk : in std_logic;
-        fifo_rst : in std_logic;
-
-        -- TX Data interface
-        tx_tdata  : out std_logic_vector(63 downto 0);
-        tx_tlast  : out std_logic;
-        tx_tvalid : out std_logic;
-        tx_tready : in std_logic;
-
-        -- RX Data interface
-        rx_tdata  : in std_logic_vector(63 downto 0);
-        rx_tlast  : in std_logic;
-        rx_tvalid : in std_logic;
-        rx_tready : out std_logic;
-
-        -- Incoming control interface
-        ctrl_tdata  : out std_logic_vector(63 downto 0);
-        ctrl_tlast  : out std_logic;
-        ctrl_tvalid : out std_logic;
-        ctrl_tready : in std_logic;
-
-        -- Outgoing control interface
-        resp_tdata  : in std_logic_vector(63 downto 0);
-        resp_tlast  : in std_logic;
-        resp_tvalid : in std_logic;
-        resp_tready : out std_logic;
-
-        -- Debug
-        debug : out std_logic_vector(31 downto 0)
-    );
+    DEBUG_DATA    : out std_logic_vector(31 downto 0);
+    DEBUG_VALID   : out std_logic;
+    DEBUG_COUNTER : out std_logic_vector(31 downto 0);
+    DEBUG_READY   : out std_logic;
+    DEBUG_WMARK   : out std_logic;
+    DEBUG_STATE   : out std_logic_vector(3 downto 0)
+);
 end component;
+
+----------------------------------------------------------------------------------------------------------------
+-- Keep GPIF Debug Signals Available For SignalTap
+----------------------------------------------------------------------------------------------------------------
+attribute keep : boolean;
+attribute preserve : boolean;
+
+attribute keep of gpif_debug_data    : signal is true;
+attribute keep of gpif_debug_valid   : signal is true;
+attribute keep of gpif_debug_counter : signal is true;
+attribute keep of gpif_debug_ready   : signal is true;
+attribute keep of gpif_debug_wmark   : signal is true;
+attribute keep of gpif_debug_state   : signal is true;
+
+attribute preserve of gpif_debug_data    : signal is true;
+attribute preserve of gpif_debug_valid   : signal is true;
+attribute preserve of gpif_debug_counter : signal is true;
 
 ----------------------------------------------------------------------------------------------------------------
 -- Main Routine
@@ -450,150 +410,39 @@ port map
 );
 
 ----------------------------------------------------------------------------------------------------------------
--- GPIF-II
+-- GPIF-II Receive-Only Debug Controller
 ----------------------------------------------------------------------------------------------------------------
-u_gpif2_slave_fifo32 : gpif2_slave_fifo32
-    generic map (
-        DATA_RX_FIFO_SIZE => 13,
-        DATA_TX_FIFO_SIZE => 13,
-        CTRL_RX_FIFO_SIZE => 5,
-        CTRL_TX_FIFO_SIZE => 5,
+GPIF_II_Controller_mod : GPIF_II_Controller
+generic map
+(
+    ADDR_DATA_TX => "11"
+)
+port map
+(
+    GPIF_CLK => gpif_clk,
+    GPIF_RST => gpif_rst,
+    GPIF_ENB => '1',
 
-        ADDR_DATA_TX => "00",
-        ADDR_DATA_RX => "01",
-        ADDR_CTRL_TX => "10",
-        ADDR_CTRL_RX => "11"
-    )
-    port map (
-        -- GPIF
-        gpif_clk => gpif_clk,
-        gpif_rst => gpif_rst,
-        gpif_enb => '1',
-        gpif_d   => GPIF_D,
-        gpif_ctl => GPIF_CTL8 & GPIF_CTL6 & GPIF_CTL5 & GPIF_CTL4,
+    GPIF_D   => GPIF_D,
+    GPIF_CTL => GPIF_CTL8 & GPIF_CTL6 & GPIF_CTL5 & GPIF_CTL4,
 
-        sloe    => GPIF_CTL2,
-        slrd    => GPIF_CTL3,
-        slwr    => GPIF_CTL1,
-        slcs    => GPIF_CTL0,
-        pktend  => GPIF_CTL7,
-        fifoadr => fifoadr,
+    SLOE    => GPIF_CTL2,
+    SLRD    => GPIF_CTL3,
+    SLWR    => GPIF_CTL1,
+    SLCS    => GPIF_CTL0,
+    PKTEND  => GPIF_CTL7,
+    FIFOADR => fifoadr,
 
-        -- FIFO clocks
-        fifo_clk => gpif_clk,
-        fifo_rst => gpif_rst,
-
-        -- TX : FX3 / Host -> FPGA
-        tx_tdata  => tx_tdata,
-        tx_tlast  => tx_tlast,
-        tx_tvalid => tx_tvalid,
-        tx_tready => tx_tready,
-
-        -- RX : FPGA -> FX3 / Host
-        rx_tdata  => rx_tdata,
-        rx_tlast  => rx_tlast,
-        rx_tvalid => rx_tvalid,
-        rx_tready => rx_tready,
-
-        -- CTRL RX : FX3 / Host -> FPGA
-        ctrl_tdata  => ctrl_tdata,
-        ctrl_tlast  => ctrl_tlast,
-        ctrl_tvalid => ctrl_tvalid,
-        ctrl_tready => ctrl_tready,
-
-        -- CTRL TX : FPGA -> FX3 / Host
-        resp_tdata  => resp_tdata,
-        resp_tlast  => resp_tlast,
-        resp_tvalid => resp_tvalid,
-        resp_tready => resp_tready,
-
-        -- Debug
-        debug => gpif_debug
-    );
+    DEBUG_DATA    => gpif_debug_data,
+    DEBUG_VALID   => gpif_debug_valid,
+    DEBUG_COUNTER => gpif_debug_counter,
+    DEBUG_READY   => gpif_debug_ready,
+    DEBUG_WMARK   => gpif_debug_wmark,
+    DEBUG_STATE   => gpif_debug_state
+);
 
 GPIF_CTL11 <= fifoadr(1);
 GPIF_CTL12 <= fifoadr(0);
-
-----------------------------------------------------------------------------------------------------------------
--- GPIF Receive Debug
-----------------------------------------------------------------------------------------------------------------
--- tx_* and ctrl_* are outputs of gpif2_slave_fifo32 because both streams travel
--- from the FX3 / host into the FPGA.  Keep READY high so the GPIF block can drain
--- the FX3 sockets while we observe the accepted words in SignalTap.
-tx_tready   <= '1';
-ctrl_tready <= '1';
-
--- No FPGA -> host traffic is generated in this simple receive-only test.
-rx_tdata    <= (others => '0');
-rx_tlast    <= '0';
-rx_tvalid   <= '0';
-resp_tdata  <= (others => '0');
-resp_tlast  <= '0';
-resp_tvalid <= '0';
-
-gpif_receive_debug_process:
-process(gpif_clk)
-begin
-    if rising_edge(gpif_clk) then
-        if gpif_rst = '1' then
-            gpif_received_data    <= (others => '0');
-            gpif_received_last    <= '0';
-            gpif_received_valid   <= '0';
-            gpif_received_counter <= (others => '0');
-
-            gpif_ctrl_received_data    <= (others => '0');
-            gpif_ctrl_received_last    <= '0';
-            gpif_ctrl_received_valid   <= '0';
-            gpif_ctrl_received_counter <= (others => '0');
-
-        else
-            gpif_received_valid      <= '0';
-            gpif_ctrl_received_valid <= '0';
-
-            if tx_tvalid = '1' and tx_tready = '1' then
-                gpif_received_data    <= tx_tdata;
-                gpif_received_last    <= tx_tlast;
-                gpif_received_valid   <= '1';
-                gpif_received_counter <= gpif_received_counter + 1;
-            end if;
-
-            if ctrl_tvalid = '1' and ctrl_tready = '1' then
-                gpif_ctrl_received_data    <= ctrl_tdata;
-                gpif_ctrl_received_last    <= ctrl_tlast;
-                gpif_ctrl_received_valid   <= '1';
-                gpif_ctrl_received_counter <= gpif_ctrl_received_counter + 1;
-            end if;
-        end if;
-    end if;
-end process;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 ----------------------------------------------------------------------------------------------------------------
