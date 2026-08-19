@@ -209,13 +209,19 @@ architecture rtl of IceNET_AI_Platform is
 ----------------------------------------------------------------------------------------------------------------
 -- Constatns, Types and Signals
 ----------------------------------------------------------------------------------------------------------------
+signal clocks_ready_count : unsigned(15 downto 0) := (others => '0');
+signal clocks_ready : std_logic := '0';
+
 signal global_reset : std_logic := '0';
+signal gpif_rst : std_logic := '0';
 
 ----------------------------------------------------------------------------------------------------------------
 -- PLL
 ----------------------------------------------------------------------------------------------------------------
 signal gpif_clk    : std_logic;
 signal pll_locked  : std_logic;
+
+signal fifoadr : std_logic_vector(1 downto 0) := "00";
 
 ----------------------------------------------------------------------------------------------------------------
 -- Debug
@@ -238,6 +244,15 @@ port
 );
 end component;
 
+component reset_sync
+port
+(
+    clk       : in  std_logic;
+    reset_in  : in  std_logic;
+    reset_out : out std_logic
+);
+end component;
+
 component gen_clks
 port
 (
@@ -246,6 +261,74 @@ port
     c0      : out std_logic;
     locked  : out std_logic
 );
+end component;
+
+component S6CLK2PIN
+port
+(
+    I : in  std_logic;
+    O : out std_logic
+);
+end component;
+
+component gpif2_slave_fifo32
+    generic (
+        DATA_RX_FIFO_SIZE : integer := 12;
+        DATA_TX_FIFO_SIZE : integer := 12;
+        CTRL_RX_FIFO_SIZE : integer := 5;
+        CTRL_TX_FIFO_SIZE : integer := 5;
+
+        ADDR_DATA_TX : std_logic_vector(1 downto 0) := "00";
+        ADDR_DATA_RX : std_logic_vector(1 downto 0) := "01";
+        ADDR_CTRL_TX : std_logic_vector(1 downto 0) := "10";
+        ADDR_CTRL_RX : std_logic_vector(1 downto 0) := "11"
+    );
+    port (
+        -- GPIF signals
+        gpif_clk : in  std_logic;
+        gpif_rst : in  std_logic;
+        gpif_enb : in  std_logic;
+        gpif_d   : inout std_logic_vector(31 downto 0);
+        gpif_ctl : in  std_logic_vector(3 downto 0);
+
+        sloe    : out std_logic;
+        slrd    : out std_logic;
+        slwr    : out std_logic;
+        slcs    : out std_logic;
+        pktend  : out std_logic;
+        fifoadr : out std_logic_vector(1 downto 0);
+
+        -- FIFO interfaces
+        fifo_clk : in std_logic;
+        fifo_rst : in std_logic;
+
+        -- TX Data interface
+        tx_tdata  : out std_logic_vector(63 downto 0);
+        tx_tlast  : out std_logic;
+        tx_tvalid : out std_logic;
+        tx_tready : in std_logic;
+
+        -- RX Data interface
+        rx_tdata  : in std_logic_vector(63 downto 0);
+        rx_tlast  : in std_logic;
+        rx_tvalid : in std_logic;
+        rx_tready : out std_logic;
+
+        -- Incoming control interface
+        ctrl_tdata  : out std_logic_vector(63 downto 0);
+        ctrl_tlast  : out std_logic;
+        ctrl_tvalid : out std_logic;
+        ctrl_tready : in std_logic;
+
+        -- Outgoing control interface
+        resp_tdata  : in std_logic_vector(63 downto 0);
+        resp_tlast  : in std_logic;
+        resp_tvalid : in std_logic;
+        resp_tready : out std_logic;
+
+        -- Debug
+        debug : out std_logic_vector(31 downto 0)
+    );
 end component;
 
 ----------------------------------------------------------------------------------------------------------------
@@ -260,6 +343,39 @@ port map
    CLOCK => CLOCK,
 
    TIMED_RESET => global_reset
+);
+
+process(gpif_clk, global_reset, pll_locked)
+begin
+    if global_reset = '1' or pll_locked = '0' then
+        clocks_ready_count <= (others => '0');
+        clocks_ready       <= '0';
+
+    elsif rising_edge(gpif_clk) then
+        if clocks_ready = '0' then
+            clocks_ready_count <= clocks_ready_count + 1;
+            if clocks_ready_count = x"FFFF" then
+                clocks_ready <= '1';
+            else
+                clocks_ready <= '0';
+            end if;
+        end if;
+    end if;
+end process;
+
+u_reset_sync : reset_sync
+port map
+(
+    clk       => gpif_clk,
+    reset_in  => not clocks_ready,
+    reset_out => gpif_rst
+);
+
+u_clk_out : S6CLK2PIN
+port map
+(
+    I => gpif_clk,
+    O => IFCLK
 );
 
 debug_clock_50_process:
@@ -321,6 +437,97 @@ port map
     c0     => gpif_clk,
     locked => pll_locked
 );
+
+----------------------------------------------------------------------------------------------------------------
+-- GPIF-II
+----------------------------------------------------------------------------------------------------------------
+u_gpif2_slave_fifo32 : gpif2_slave_fifo32
+    generic map (
+        DATA_RX_FIFO_SIZE => 12,
+        DATA_TX_FIFO_SIZE => 12,
+        CTRL_RX_FIFO_SIZE => 5,
+        CTRL_TX_FIFO_SIZE => 5,
+
+        ADDR_DATA_TX => "00",
+        ADDR_DATA_RX => "01",
+        ADDR_CTRL_TX => "10",
+        ADDR_CTRL_RX => "11"
+    )
+    port map (
+        -- GPIF
+        gpif_clk => gpif_clk,
+        gpif_rst => gpif_rst,
+        gpif_enb => '1',
+        gpif_d   => GPIF_D,
+        gpif_ctl => GPIF_CTL8 & GPIF_CTL6 & GPIF_CTL5 & GPIF_CTL4,
+
+        sloe    => GPIF_CTL2,
+        slrd    => GPIF_CTL3,
+        slwr    => GPIF_CTL1,
+        slcs    => GPIF_CTL0,
+        pktend  => GPIF_CTL7,
+        fifoadr => fifoadr,
+
+        -- FIFO clocks
+        fifo_clk => gpif_clk,
+        fifo_rst => gpif_rst,
+
+        -- TX
+        tx_tdata  => open,
+        tx_tlast  => open,
+        tx_tvalid => open,
+        tx_tready => '0',
+
+        -- RX
+        rx_tdata  => (others => '0'),
+        rx_tlast  => '0',
+        rx_tvalid => '0',
+        rx_tready => open,
+
+        -- CTRL RX
+        ctrl_tdata  => open,
+        ctrl_tlast  => open,
+        ctrl_tvalid => open,
+        ctrl_tready => '0',
+
+        -- CTRL TX
+        resp_tdata  => (others => '0'),
+        resp_tlast  => '0',
+        resp_tvalid => '0',
+        resp_tready => open,
+
+        -- Debug
+        debug => open
+    );
+
+GPIF_CTL11 <= fifoadr(1);
+GPIF_CTL12 <= fifoadr(0);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

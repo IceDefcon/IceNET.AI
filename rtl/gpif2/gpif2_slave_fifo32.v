@@ -52,9 +52,9 @@ module gpif2_slave_fifo32
     output [31:0] debug
     );
 
-   reg        fifo_nearly_full;
-   wire       ctrl_tx_fifo_nearly_full, data_tx_fifo_nearly_full;
-   wire       ctrl_tx_fifo_has_space, data_tx_fifo_has_space;
+   reg      fifo_nearly_full;
+   wire     ctrl_tx_fifo_nearly_full, data_tx_fifo_nearly_full;
+   wire     ctrl_tx_fifo_has_space, data_tx_fifo_has_space;
 
 
     assign slcs = 1'b0;
@@ -77,8 +77,8 @@ module gpif2_slave_fifo32
 
     always @(posedge gpif_clk)
       if (~slrd2)
-    // Update data register only when something useful is read.
-    // Hold values until we know if they are end of packets for single beat reads.
+  // Update data register only when something useful is read.
+  // Hold values until we know if they are end of packets for single beat reads.
     gpif_data_in <= gpif_d;
 
     assign gpif_d = sloe ? gpif_data_out[31:0] : 32'bz;
@@ -268,11 +268,11 @@ module gpif2_slave_fifo32
       //
       STATE_READ_SINGLE: begin
         if (idle_cycles == 0) begin
-        // Deassert read strobe after reading single 32bit word
+      // Deassert read strobe after reading single 32bit word
           slrd <= 1'b1;
           idle_cycles <= idle_cycles + 1;
-          end else if (idle_cycles == 5) begin
-        // READY1 flag now reflect effects of last read.
+        end else if (idle_cycles == 5) begin
+    // READY1 flag now reflect effects of last read.
         if (!fx3_ready1) begin
            state <= STATE_IDLE;
            sloe <= 1'b1;
@@ -475,11 +475,54 @@ module gpif2_slave_fifo32
 
     wire ctrl_bus_error, tx_bus_error;
 
-   // ////////////////////////////////////////////////////////////////////
-   // TX Data Path
-   wire [31:0] debug_data_fifo;
+   // // ////////////////////////////////////////////////////////////////////
+   // // TX Data Path
+   // wire [31:0] debug_data_fifo;
 
-    wire [31:0] debug_ctrl_fifo;
+   //  gpif2_to_fifo64 #(.FIFO_SIZE(DATA_TX_FIFO_SIZE)) gpif2_to_fifo64_tx(
+   //      .gpif_clk(gpif_clk), .gpif_rst(gpif_rst),
+   //      .i_tdata(gpif_data_in), .i_tlast(data_ctrl_tx_tlast), .i_tvalid(data_tx_tvalid), .i_tready(data_tx_tready), // IJB. NOTE data_tx_tready currently unused.
+   //      .fifo_clk(fifo_clk), .fifo_rst(fifo_rst),
+   //      .fifo_nearly_full(data_tx_fifo_nearly_full), .fifo_has_space(data_tx_fifo_has_space),
+   //      .o_tdata(tx_tdata), .o_tlast(tx_tlast), .o_tvalid(tx_tvalid), .o_tready(tx_tready),
+   //      .bus_error(tx_bus_error), .debug(debug_data_fifo)
+   //  );
+
+   // // ////////////////////////////////////////////
+   // // RX Data Path
+
+   //  fifo64_to_gpif2 #(.FIFO_SIZE(DATA_RX_FIFO_SIZE)) fifo64_to_gpif2_rx(
+   //      .fifo_clk(fifo_clk), .fifo_rst(fifo_rst),
+   //      .i_tdata(rx_tdata), .i_tlast(rx_tlast), .i_tvalid(rx_tvalid), .i_tready(rx_tready),
+   //      .gpif_clk(gpif_clk), .gpif_rst(gpif_rst),
+   //      .o_tdata(data_rx_tdata), .o_tlast(data_rx_tlast), .o_tvalid(data_rx_tvalid), .o_tready(data_rx_tready)
+   //  );
+
+   //  // ////////////////////////////////////////////////////////////////////
+   //  // CTRL path
+   //  wire [31:0] debug_ctrl_fifo;
+
+   //  gpif2_to_fifo64 #(.FIFO_SIZE(CTRL_TX_FIFO_SIZE)) gpif2_to_fifo64_ctrl(
+   //      .gpif_clk(gpif_clk), .gpif_rst(gpif_rst),
+   //      .i_tdata(gpif_data_in), .i_tlast(data_ctrl_tx_tlast), .i_tvalid(ctrl_tx_tvalid), .i_tready(ctrl_tx_tready), // IJB. NOTE data_tx_tready currently unused.
+   //      .fifo_clk(fifo_clk), .fifo_rst(fifo_rst),
+   //      .fifo_nearly_full(ctrl_tx_fifo_nearly_full), .fifo_has_space(ctrl_tx_fifo_has_space),
+   //      .o_tdata(ctrl_tdata), .o_tlast(ctrl_tlast), .o_tvalid(ctrl_tvalid), .o_tready(ctrl_tready),
+   //      .bus_error(ctrl_bus_error), .debug(debug_ctrl_fifo)
+   //  );
+
+   // // ////////////////////////////////////////////////////////////////////
+   // // RESP path
+
+   //  fifo64_to_gpif2 #(.FIFO_SIZE(CTRL_RX_FIFO_SIZE)) fifo64_to_gpif2_resp(
+   //      .fifo_clk(fifo_clk), .fifo_rst(fifo_rst),
+   //      .i_tdata(resp_tdata), .i_tlast(resp_tlast), .i_tvalid(resp_tvalid), .i_tready(resp_tready),
+   //      .gpif_clk(gpif_clk), .gpif_rst(gpif_rst),
+   //      .o_tdata(ctrl_rx_tdata), .o_tlast(ctrl_rx_tlast), .o_tvalid(ctrl_rx_tvalid), .o_tready(ctrl_rx_tready)
+   //  );
+
+
+
 
 
 
