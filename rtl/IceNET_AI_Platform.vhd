@@ -80,7 +80,7 @@ port
     GPIF_CTL12 : out std_logic; -- PIN_A17 :: A0
     GPIF_CTL11 : out std_logic; -- PIN_A16 :: A1
     PIN_A15    : out std_logic;
-    GPIF_CTL9  : out std_logic; -- PIN_A14 :: GPIO
+    GPIF_CTL9  : in std_logic;  -- PIN_A14 :: global_reset
     GPIF_CTL8  : in std_logic;  -- PIN_A13 :: GPIO
     GPIF_CTL7  : out std_logic; -- PIN_A10 :: n_PKTEND
     GPIF_CTL6  : in std_logic;  -- PIN_A9  :: GPIO
@@ -106,22 +106,6 @@ port
     PIN_B20 : out std_logic;
     PIN_B19 : out std_logic;
     PIN_B18 : out std_logic;
-    DQ15 : out std_logic; -- PIN_B17
-    DQ14 : out std_logic; -- PIN_B16
-    DQ13 : out std_logic; -- PIN_B15
-    DQ12 : out std_logic; -- PIN_B14
-    DQ11 : out std_logic; -- PIN_B13
-    DQ10 : out std_logic; -- PIN_B10
-    DQ9  : out std_logic; -- PIN_B9
-    DQ8  : out std_logic; -- PIN_B8
-    DQ7  : out std_logic; -- PIN_B7
-    DQ6  : out std_logic; -- PIN_B6
-    DQ5  : out std_logic; -- PIN_B5
-    DQ4  : out std_logic; -- PIN_C4
-    DQ3  : out std_logic; -- PIN_B4
-    DQ2  : out std_logic; -- PIN_B3
-    DQ1  : out std_logic; -- PIN_B1
-    DQ0  : out std_logic; -- PIN_C1
     PIN_E1  : out std_logic;
     PIN_F1  : out std_logic;
     PIN_H1  : out std_logic;
@@ -161,23 +145,7 @@ port
 
     PIN_M20  : out std_logic;
     PIN_N20  : out std_logic;
-    DQ31 : out std_logic; -- PIN_B22
-    DQ30 : out std_logic; -- PIN_C22
-    DQ29 : out std_logic; -- PIN_D22
-    DQ28 : out std_logic; -- PIN_E22
     PIN_F22 : out std_logic;
-    DQ27 : out std_logic; -- PIN_H22
-    DQ26 : out std_logic; -- PIN_J22
-    DQ25 : out std_logic; -- PIN_K22
-    DQ24 : out std_logic; -- PIN_L22
-    DQ23 : out std_logic; -- PIN_M22
-    DQ22 : out std_logic; -- PIN_N22
-    DQ21 : out std_logic; -- PIN_P22
-    DQ20 : out std_logic; -- PIN_R22
-    DQ19 : out std_logic; -- PIN_U22
-    DQ18 : out std_logic; -- PIN_V22
-    DQ17 : out std_logic; -- PIN_W22
-    DQ16 : out std_logic; -- PIN_Y22
     PIN_AA20 : out std_logic;
     PIN_AA19 : out std_logic;
     PIN_AA18 : out std_logic;
@@ -187,7 +155,7 @@ port
     PIN_AA14 : out std_logic;
     PIN_AA13 : out std_logic;
 
-    GPIF_D : inout std_logic_vector(31 downto 0); -- PIN_A20..PIN_B4
+    GPIF_D : inout std_logic_vector(31 downto 0); -- FX3 DQ[31:0]
 
     ----------------------------------------------------------------------------------------------------------------
     -- DEBUG LEDS
@@ -212,8 +180,47 @@ architecture rtl of IceNET_AI_Platform is
 signal clocks_ready_count : unsigned(15 downto 0) := (others => '0');
 signal clocks_ready : std_logic := '0';
 
+signal timed_reset  : std_logic := '0';
 signal global_reset : std_logic := '0';
-signal gpif_rst : std_logic := '0';
+signal gpif_rst     : std_logic := '0';
+
+----------------------------------------------------------------------------------------------------------------
+-- GPIF Streams
+----------------------------------------------------------------------------------------------------------------
+signal tx_tdata  : std_logic_vector(63 downto 0) := (others => '0');
+signal tx_tlast  : std_logic := '0';
+signal tx_tvalid : std_logic := '0';
+signal tx_tready : std_logic := '1';
+
+signal rx_tdata  : std_logic_vector(63 downto 0) := (others => '0');
+signal rx_tlast  : std_logic := '0';
+signal rx_tvalid : std_logic := '0';
+signal rx_tready : std_logic := '0';
+
+signal ctrl_tdata  : std_logic_vector(63 downto 0) := (others => '0');
+signal ctrl_tlast  : std_logic := '0';
+signal ctrl_tvalid : std_logic := '0';
+signal ctrl_tready : std_logic := '1';
+
+signal resp_tdata  : std_logic_vector(63 downto 0) := (others => '0');
+signal resp_tlast  : std_logic := '0';
+signal resp_tvalid : std_logic := '0';
+signal resp_tready : std_logic := '0';
+
+signal gpif_debug : std_logic_vector(31 downto 0) := (others => '0');
+
+----------------------------------------------------------------------------------------------------------------
+-- GPIF Receive Debug
+----------------------------------------------------------------------------------------------------------------
+signal gpif_received_data    : std_logic_vector(63 downto 0) := (others => '0');
+signal gpif_received_last    : std_logic := '0';
+signal gpif_received_valid   : std_logic := '0';
+signal gpif_received_counter : unsigned(31 downto 0) := (others => '0');
+
+signal gpif_ctrl_received_data    : std_logic_vector(63 downto 0) := (others => '0');
+signal gpif_ctrl_received_last    : std_logic := '0';
+signal gpif_ctrl_received_valid   : std_logic := '0';
+signal gpif_ctrl_received_counter : unsigned(31 downto 0) := (others => '0');
 
 ----------------------------------------------------------------------------------------------------------------
 -- PLL
@@ -342,8 +349,12 @@ port map
    RESET => RESET,
    CLOCK => CLOCK,
 
-   TIMED_RESET => global_reset
+   TIMED_RESET => timed_reset
 );
+
+-- Original B200 firmware drives GPIF_CTL9 high to reset the FPGA-side logic.
+-- Keep the local RESET path as well, so either source can reset the design.
+global_reset <= timed_reset or GPIF_CTL9;
 
 process(gpif_clk, global_reset, pll_locked)
 begin
@@ -443,8 +454,8 @@ port map
 ----------------------------------------------------------------------------------------------------------------
 u_gpif2_slave_fifo32 : gpif2_slave_fifo32
     generic map (
-        DATA_RX_FIFO_SIZE => 12,
-        DATA_TX_FIFO_SIZE => 12,
+        DATA_RX_FIFO_SIZE => 13,
+        DATA_TX_FIFO_SIZE => 13,
         CTRL_RX_FIFO_SIZE => 5,
         CTRL_TX_FIFO_SIZE => 5,
 
@@ -472,36 +483,89 @@ u_gpif2_slave_fifo32 : gpif2_slave_fifo32
         fifo_clk => gpif_clk,
         fifo_rst => gpif_rst,
 
-        -- TX
-        tx_tdata  => open,
-        tx_tlast  => open,
-        tx_tvalid => open,
-        tx_tready => '0',
+        -- TX : FX3 / Host -> FPGA
+        tx_tdata  => tx_tdata,
+        tx_tlast  => tx_tlast,
+        tx_tvalid => tx_tvalid,
+        tx_tready => tx_tready,
 
-        -- RX
-        rx_tdata  => (others => '0'),
-        rx_tlast  => '0',
-        rx_tvalid => '0',
-        rx_tready => open,
+        -- RX : FPGA -> FX3 / Host
+        rx_tdata  => rx_tdata,
+        rx_tlast  => rx_tlast,
+        rx_tvalid => rx_tvalid,
+        rx_tready => rx_tready,
 
-        -- CTRL RX
-        ctrl_tdata  => open,
-        ctrl_tlast  => open,
-        ctrl_tvalid => open,
-        ctrl_tready => '0',
+        -- CTRL RX : FX3 / Host -> FPGA
+        ctrl_tdata  => ctrl_tdata,
+        ctrl_tlast  => ctrl_tlast,
+        ctrl_tvalid => ctrl_tvalid,
+        ctrl_tready => ctrl_tready,
 
-        -- CTRL TX
-        resp_tdata  => (others => '0'),
-        resp_tlast  => '0',
-        resp_tvalid => '0',
-        resp_tready => open,
+        -- CTRL TX : FPGA -> FX3 / Host
+        resp_tdata  => resp_tdata,
+        resp_tlast  => resp_tlast,
+        resp_tvalid => resp_tvalid,
+        resp_tready => resp_tready,
 
         -- Debug
-        debug => open
+        debug => gpif_debug
     );
 
 GPIF_CTL11 <= fifoadr(1);
 GPIF_CTL12 <= fifoadr(0);
+
+----------------------------------------------------------------------------------------------------------------
+-- GPIF Receive Debug
+----------------------------------------------------------------------------------------------------------------
+-- tx_* and ctrl_* are outputs of gpif2_slave_fifo32 because both streams travel
+-- from the FX3 / host into the FPGA.  Keep READY high so the GPIF block can drain
+-- the FX3 sockets while we observe the accepted words in SignalTap.
+tx_tready   <= '1';
+ctrl_tready <= '1';
+
+-- No FPGA -> host traffic is generated in this simple receive-only test.
+rx_tdata    <= (others => '0');
+rx_tlast    <= '0';
+rx_tvalid   <= '0';
+resp_tdata  <= (others => '0');
+resp_tlast  <= '0';
+resp_tvalid <= '0';
+
+gpif_receive_debug_process:
+process(gpif_clk)
+begin
+    if rising_edge(gpif_clk) then
+        if gpif_rst = '1' then
+            gpif_received_data    <= (others => '0');
+            gpif_received_last    <= '0';
+            gpif_received_valid   <= '0';
+            gpif_received_counter <= (others => '0');
+
+            gpif_ctrl_received_data    <= (others => '0');
+            gpif_ctrl_received_last    <= '0';
+            gpif_ctrl_received_valid   <= '0';
+            gpif_ctrl_received_counter <= (others => '0');
+
+        else
+            gpif_received_valid      <= '0';
+            gpif_ctrl_received_valid <= '0';
+
+            if tx_tvalid = '1' and tx_tready = '1' then
+                gpif_received_data    <= tx_tdata;
+                gpif_received_last    <= tx_tlast;
+                gpif_received_valid   <= '1';
+                gpif_received_counter <= gpif_received_counter + 1;
+            end if;
+
+            if ctrl_tvalid = '1' and ctrl_tready = '1' then
+                gpif_ctrl_received_data    <= ctrl_tdata;
+                gpif_ctrl_received_last    <= ctrl_tlast;
+                gpif_ctrl_received_valid   <= '1';
+                gpif_ctrl_received_counter <= gpif_ctrl_received_counter + 1;
+            end if;
+        end if;
+    end if;
+end process;
 
 
 
