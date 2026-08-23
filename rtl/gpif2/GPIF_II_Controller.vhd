@@ -16,7 +16,7 @@ entity GPIF_II_Controller is
         GPIF_RST : in  std_logic;
         GPIF_ENB : in  std_logic;
 
-        GPIF_D   : inout std_logic_vector(31 downto 0);
+        GPIF_D   : inout std_logic_vector(15 downto 0);
         GPIF_CTL : in    std_logic_vector(3 downto 0);
 
         SLOE     : out std_logic;
@@ -29,7 +29,7 @@ entity GPIF_II_Controller is
         ----------------------------------------------------------------------------------------------------------------
         -- SignalTap Debug
         ----------------------------------------------------------------------------------------------------------------
-        DEBUG_DATA    : out std_logic_vector(31 downto 0);
+        DEBUG_DATA    : out std_logic_vector(15 downto 0);
         DEBUG_VALID   : out std_logic;
         DEBUG_COUNTER : out std_logic_vector(31 downto 0);
         DEBUG_READY   : out std_logic;
@@ -49,9 +49,9 @@ type GPIF_STATE_TYPE is
     GPIF_IDLE,
     GPIF_WAIT,
     GPIF_THINK,
+    GPIF_READ_SETUP,
     GPIF_READ,
-    GPIF_READ_FLUSH,
-    GPIF_READ_SINGLE
+    GPIF_READ_RECOVERY
 );
 
 signal gpif_state : GPIF_STATE_TYPE := GPIF_IDLE;
@@ -64,20 +64,15 @@ signal fx3_ready1 : std_logic := '0';
 signal fx3_wmark  : std_logic := '0';
 signal fx3_wmark1 : std_logic := '0';
 
--- Read strobe pipeline. This follows the timing style used by the Ettus GPIF controller.
 signal slrd_int : std_logic := '1';
-signal slrd1    : std_logic := '1';
-signal slrd2    : std_logic := '1';
-signal slrd3    : std_logic := '1';
-signal slrd4    : std_logic := '1';
-signal slrd5    : std_logic := '1';
-
 signal sloe_int : std_logic := '1';
 
 signal wait_counter : unsigned(2 downto 0) := (others => '0');
-signal first_read   : std_logic := '0';
 
-signal debug_data_reg    : std_logic_vector(31 downto 0) := (others => '0');
+-- FX3 synchronous Slave FIFO read latency is exactly two PCLK cycles.
+signal read_valid_pipeline : std_logic_vector(1 downto 0) := (others => '0');
+
+signal debug_data_reg    : std_logic_vector(15 downto 0) := (others => '0');
 signal debug_valid_reg   : std_logic := '0';
 signal debug_counter_reg : unsigned(31 downto 0) := (others => '0');
 
@@ -118,9 +113,9 @@ with gpif_state select DEBUG_STATE <=
     "0000" when GPIF_IDLE,
     "0001" when GPIF_WAIT,
     "0010" when GPIF_THINK,
-    "0011" when GPIF_READ,
-    "0100" when GPIF_READ_FLUSH,
-    "0101" when GPIF_READ_SINGLE,
+    "0011" when GPIF_READ_SETUP,
+    "0100" when GPIF_READ,
+    "0101" when GPIF_READ_RECOVERY,
     "1111" when others;
 
 ----------------------------------------------------------------------------------------------------------------
@@ -147,37 +142,17 @@ begin
 end process;
 
 ----------------------------------------------------------------------------------------------------------------
--- Read Strobe Pipeline
-----------------------------------------------------------------------------------------------------------------
-
-slrd_pipeline_process:
-process(GPIF_CLK)
-begin
-    if rising_edge(GPIF_CLK) then
-        if GPIF_RST = '1' then
-            slrd1 <= '1';
-            slrd2 <= '1';
-            slrd3 <= '1';
-            slrd4 <= '1';
-            slrd5 <= '1';
-        else
-            slrd1 <= slrd_int;
-            slrd2 <= slrd1;
-            slrd3 <= slrd2;
-            slrd4 <= slrd3;
-            slrd5 <= slrd4;
-        end if;
-    end if;
-end process;
-
-----------------------------------------------------------------------------------------------------------------
--- Debug Data Register
+-- Read Valid Pipeline And Debug Data Register
 ----------------------------------------------------------------------------------------------------------------
 --
 -- No FIFO is used.
--- Every accepted 32-bit GPIF word overwrites DEBUG_DATA.
+-- Every accepted 16-bit GPIF word overwrites DEBUG_DATA.
 -- DEBUG_VALID pulses for one GPIF_CLK cycle for each captured word.
 -- DEBUG_COUNTER increments for every captured word.
+--
+-- According to the FX3 synchronous Slave FIFO timing specification,
+-- valid data appears exactly two PCLK cycles after the rising edge
+-- on which SLRD# is sampled active.
 --
 ----------------------------------------------------------------------------------------------------------------
 
@@ -186,15 +161,38 @@ process(GPIF_CLK)
 begin
     if rising_edge(GPIF_CLK) then
         if GPIF_RST = '1' then
+            read_valid_pipeline <= (others => '0');
+
             debug_data_reg    <= (others => '0');
             debug_valid_reg   <= '0';
             debug_counter_reg <= (others => '0');
         else
-            debug_valid_reg <= '0';
+            ----------------------------------------------------------------------------------------------------------------
+            -- Shift the read request through the two-clock
+            -- FX3 Slave FIFO read-latency pipeline.
+            ----------------------------------------------------------------------------------------------------------------
+            read_valid_pipeline(0) <= '0';
+            read_valid_pipeline(1) <= read_valid_pipeline(0);
+            ----------------------------------------------------------------------------------------------------------------
+            -- Register a read request on the rising edge where
+            -- the FX3 observes SLRD# asserted.
+            ----------------------------------------------------------------------------------------------------------------
+            if sloe_int = '0'
+            and slrd_int = '0' then
+                read_valid_pipeline(0) <= '1';
+            end if;
 
-            -- The data bus is sampled two clocks after SLRD# assertion,
-            -- matching the read-strobe pipeline used by the Ettus controller.
-            if slrd2 = '0' then
+            debug_valid_reg <= '0';
+            ----------------------------------------------------------------------------------------------------------------
+            -- Capture GPIF_D exactly two GPIF_CLK cycles after
+            -- the corresponding SLRD# read request.
+            --
+            -- Do not check the current READY flag here. READY
+            -- may already be low after the last word was read,
+            -- while that final word is still moving through the
+            -- two-clock output pipeline.
+            ----------------------------------------------------------------------------------------------------------------
+            if read_valid_pipeline(1) = '1' then
                 debug_data_reg    <= GPIF_D;
                 debug_valid_reg   <= '1';
                 debug_counter_reg <= debug_counter_reg + 1;
@@ -207,9 +205,17 @@ end process;
 -- Receive-Only GPIF State Machine
 ----------------------------------------------------------------------------------------------------------------
 --
--- This controller services only ADDR_DATA_TX.
--- It never stores data in a FIFO and never applies backpressure.
--- The most recently received 32-bit word is simply retained in DEBUG_DATA.
+-- The controller performs conservative single-word reads:
+--
+-- 1. Wait for READY.
+-- 2. Assert SLOE# one clock before SLRD#.
+-- 3. Assert SLRD# for exactly one GPIF clock.
+-- 4. Keep SLOE# asserted while the data propagates.
+-- 5. Capture data two GPIF clocks after the read request.
+-- 6. Wait for the FX3 flags to update before reading again.
+--
+-- This controller is intended for initial GPIF debugging. It prioritizes
+-- reliable transfers over maximum GPIF throughput.
 --
 ----------------------------------------------------------------------------------------------------------------
 
@@ -222,14 +228,12 @@ begin
             sloe_int     <= '1';
             slrd_int     <= '1';
             wait_counter <= (others => '0');
-            first_read   <= '0';
 
         elsif GPIF_ENB = '0' then
             gpif_state   <= GPIF_IDLE;
             sloe_int     <= '1';
             slrd_int     <= '1';
             wait_counter <= (others => '0');
-            first_read   <= '0';
 
         else
             case gpif_state is
@@ -241,9 +245,9 @@ begin
                     sloe_int     <= '1';
                     slrd_int     <= '1';
                     wait_counter <= (others => '0');
-                    first_read   <= '0';
 
-                    -- FIFOADR is fixed, but allow the FX3 address/flags time to settle.
+                    -- FIFOADR is fixed, but allow the address and FX3 flags
+                    -- time to settle before checking READY.
                     gpif_state <= GPIF_WAIT;
 
                 --------------------------------------------------------------------------------------------------------
@@ -261,101 +265,68 @@ begin
                     end if;
 
                 --------------------------------------------------------------------------------------------------------
-                -- Decide whether a read can start
+                -- Check whether the selected FX3 thread contains data
                 --------------------------------------------------------------------------------------------------------
                 when GPIF_THINK =>
+                    sloe_int     <= '1';
+                    slrd_int     <= '1';
                     wait_counter <= (others => '0');
 
-                    if fx3_ready1 = '1' and fx3_wmark1 = '1' then
-                        -- Burst read.
+                    if fx3_ready1 = '1' then
+                        -- Enable the FX3 data bus before asserting SLRD#.
                         sloe_int   <= '0';
-                        slrd_int   <= '0';
-                        first_read <= '1';
-                        gpif_state <= GPIF_READ;
-
-                    elsif fx3_ready1 = '1' and fx3_wmark1 = '0' then
-                        -- Less than a watermark of data remains. Read one beat,
-                        -- wait for READY to update, then decide whether another beat exists.
-                        sloe_int     <= '0';
-                        slrd_int     <= '0';
-                        wait_counter <= (others => '0');
-                        gpif_state   <= GPIF_READ_SINGLE;
-
+                        gpif_state <= GPIF_READ_SETUP;
                     else
-                        -- No data currently available from the selected FX3 thread.
-                        sloe_int   <= '1';
-                        slrd_int   <= '1';
                         gpif_state <= GPIF_THINK;
                     end if;
 
                 --------------------------------------------------------------------------------------------------------
-                -- Continuous burst read
+                -- Allow one clock for FX3 to drive GPIF_D
+                --------------------------------------------------------------------------------------------------------
+                when GPIF_READ_SETUP =>
+                    sloe_int <= '0';
+                    slrd_int <= '0';
+
+                    -- SLRD# becomes active after this GPIF clock edge.
+                    -- FX3 samples it on the following rising edge.
+                    gpif_state <= GPIF_READ;
+
+                --------------------------------------------------------------------------------------------------------
+                -- FX3 accepts one read request
                 --------------------------------------------------------------------------------------------------------
                 when GPIF_READ =>
-                    sloe_int <= '0';
+                    sloe_int     <= '0';
+                    slrd_int     <= '1';
+                    wait_counter <= (others => '0');
 
-                    if fx3_wmark1 = '0' then
-                        -- Watermark says the end of the available burst is approaching.
-                        slrd_int   <= '1';
-                        gpif_state <= GPIF_READ_FLUSH;
-                    else
-                        slrd_int <= '0';
-                    end if;
-
-                    if slrd3 = '0' then
-                        first_read <= '0';
-                    end if;
+                    -- The read request enters read_valid_pipeline here.
+                    -- GPIF_D will be captured two GPIF clocks later.
+                    gpif_state <= GPIF_READ_RECOVERY;
 
                 --------------------------------------------------------------------------------------------------------
-                -- Drain the read pipeline before releasing GPIF_D
+                -- Keep SLOE# active while data propagates
                 --------------------------------------------------------------------------------------------------------
-                when GPIF_READ_FLUSH =>
+                when GPIF_READ_RECOVERY =>
                     sloe_int <= '0';
                     slrd_int <= '1';
 
-                    if slrd3 = '0' then
-                        first_read <= '0';
-                    end if;
-
-                    if first_read = '0' and slrd3 = '1' then
-                        sloe_int   <= '1';
-                        gpif_state <= GPIF_IDLE;
-                    end if;
-
-                --------------------------------------------------------------------------------------------------------
-                -- Single-word read path used when READY=1 but WATERMARK=0
-                --------------------------------------------------------------------------------------------------------
-                when GPIF_READ_SINGLE =>
-                    sloe_int <= '0';
-
-                    if wait_counter = "000" then
-                        -- The read strobe was asserted when entering this state.
-                        -- Deassert it after one GPIF clock.
-                        slrd_int     <= '1';
-                        wait_counter <= wait_counter + 1;
-
-                    elsif wait_counter = "101" then
-                        -- By now the READY flag has had time to reflect the previous read.
-                        if fx3_ready1 = '0' then
-                            sloe_int     <= '1';
-                            slrd_int     <= '1';
-                            wait_counter <= (others => '0');
-                            gpif_state   <= GPIF_IDLE;
-                        else
-                            -- Another word remains. Generate another one-cycle SLRD# pulse.
-                            slrd_int     <= '0';
-                            wait_counter <= (others => '0');
-                        end if;
-
+                    -- Five recovery clocks are sufficient for:
+                    -- 1. The two-clock FX3 read latency.
+                    -- 2. DEBUG_DATA capture.
+                    -- 3. READY/WATERMARK flag propagation.
+                    if wait_counter = "101" then
+                        wait_counter <= (others => '0');
+                        sloe_int     <= '1';
+                        gpif_state   <= GPIF_THINK;
                     else
-                        slrd_int     <= '1';
                         wait_counter <= wait_counter + 1;
                     end if;
 
                 when others =>
-                    gpif_state <= GPIF_IDLE;
-                    sloe_int   <= '1';
-                    slrd_int   <= '1';
+                    gpif_state   <= GPIF_IDLE;
+                    sloe_int     <= '1';
+                    slrd_int     <= '1';
+                    wait_counter <= (others => '0');
 
             end case;
         end if;

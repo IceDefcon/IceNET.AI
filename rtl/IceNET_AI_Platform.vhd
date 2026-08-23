@@ -115,37 +115,37 @@ port
     PIN_P1  : out std_logic;
     PIN_R1  : out std_logic;
 
-    PIN_M19  : out std_logic;
-    FX3_EXTINT  : in std_logic; -- PIN_N19
-    PIN_B21  : out std_logic;
-    PIN_C21  : out std_logic;
-    PIN_D21  : out std_logic;
-    PIN_E21  : out std_logic;
-    PIN_F21  : out std_logic;
-    PIN_H21  : out std_logic;
-    PIN_J21  : out std_logic;
-    PIN_K21  : out std_logic;
-    PIN_L21  : out std_logic;
-    PIN_M21  : out std_logic;
-    PIN_N21  : out std_logic;
-    PIN_P21  : out std_logic;
-    PIN_R21  : out std_logic;
-    PIN_U21  : out std_logic;
-    PIN_V21  : out std_logic;
-    PIN_W21  : out std_logic;
-    PIN_Y21  : out std_logic;
-    PIN_AB20 : out std_logic;
-    PIN_AB19 : out std_logic;
-    PIN_AB18 : out std_logic;
-    PIN_AB17 : out std_logic;
-    PIN_AB16 : out std_logic;
-    PIN_AB15 : out std_logic;
-    PIN_AB14 : out std_logic;
-    PIN_AB13 : out std_logic;
+    PIN_M19   : out std_logic;
+    FX3_EXTINT : in std_logic; -- PIN_N19
+    PIN_B21   : out std_logic;
+    PIN_C21   : out std_logic;
+    PIN_D21   : out std_logic;
+    PIN_E21   : out std_logic;
+    PIN_F21   : out std_logic;
+    PIN_H21   : out std_logic;
+    PIN_J21   : out std_logic;
+    PIN_K21   : out std_logic;
+    PIN_L21   : out std_logic;
+    PIN_M21   : out std_logic;
+    PIN_N21   : out std_logic;
+    PIN_P21   : out std_logic;
+    PIN_R21   : out std_logic;
+    PIN_U21   : out std_logic;
+    PIN_V21   : out std_logic;
+    PIN_W21   : out std_logic;
+    PIN_Y21   : out std_logic;
+    PIN_AB20  : out std_logic;
+    PIN_AB19  : out std_logic;
+    PIN_AB18  : out std_logic;
+    PIN_AB17  : out std_logic;
+    PIN_AB16  : out std_logic;
+    PIN_AB15  : out std_logic;
+    PIN_AB14  : out std_logic;
+    PIN_AB13  : out std_logic;
 
     PIN_M20  : out std_logic;
     PIN_N20  : out std_logic;
-    PIN_F22 : out std_logic;
+    PIN_F22  : out std_logic;
     PIN_AA20 : out std_logic;
     PIN_AA19 : out std_logic;
     PIN_AA18 : out std_logic;
@@ -155,7 +155,7 @@ port
     PIN_AA14 : out std_logic;
     PIN_AA13 : out std_logic;
 
-    GPIF_D : inout std_logic_vector(31 downto 0); -- FX3 DQ[31:0]
+    GPIF_D : inout std_logic_vector(15 downto 0); -- FX3 DQ[15:0]
 
     ----------------------------------------------------------------------------------------------------------------
     -- DEBUG LEDS
@@ -187,7 +187,7 @@ signal gpif_rst     : std_logic := '0';
 ----------------------------------------------------------------------------------------------------------------
 -- GPIF Receive Debug
 ----------------------------------------------------------------------------------------------------------------
-signal gpif_debug_data    : std_logic_vector(31 downto 0) := (others => '0');
+signal gpif_debug_data    : std_logic_vector(15 downto 0) := (others => '0');
 signal gpif_debug_valid   : std_logic := '0';
 signal gpif_debug_counter : std_logic_vector(31 downto 0) := (others => '0');
 
@@ -198,15 +198,15 @@ signal gpif_debug_state : std_logic_vector(3 downto 0) := (others => '0');
 ----------------------------------------------------------------------------------------------------------------
 -- PLL
 ----------------------------------------------------------------------------------------------------------------
-signal gpif_clk    : std_logic;
-signal pll_locked  : std_logic;
+signal gpif_clk   : std_logic;
+signal pll_locked : std_logic;
 
 signal fifoadr : std_logic_vector(1 downto 0) := "00";
 
 ----------------------------------------------------------------------------------------------------------------
 -- Debug
 ----------------------------------------------------------------------------------------------------------------
-signal debug_clock_50_counter : integer range 0 to 50 := 0;
+signal debug_clock_50_counter  : integer range 0 to 50 := 0;
 signal debug_clock_100_counter : integer range 0 to 50 := 0;
 
 signal debug_led_1 : std_logic := '0';
@@ -220,6 +220,7 @@ port
 (
     RESET : in  std_logic;
     CLOCK : in  std_logic;
+
     TIMED_RESET : out std_logic
 );
 end component;
@@ -236,10 +237,11 @@ end component;
 component gen_clks
 port
 (
-    areset  : in  std_logic := '0';
-    inclk0  : in  std_logic := '0';
-    c0      : out std_logic;
-    locked  : out std_logic
+    areset : in std_logic := '0';
+    inclk0 : in std_logic := '0';
+
+    c0     : out std_logic;
+    locked : out std_logic
 );
 end component;
 
@@ -247,6 +249,7 @@ component S6CLK2PIN
 port
 (
     I : in  std_logic;
+
     O : out std_logic
 );
 end component;
@@ -262,7 +265,7 @@ port
     GPIF_RST : in std_logic;
     GPIF_ENB : in std_logic;
 
-    GPIF_D   : inout std_logic_vector(31 downto 0);
+    GPIF_D   : inout std_logic_vector(15 downto 0);
     GPIF_CTL : in std_logic_vector(3 downto 0);
 
     SLOE    : out std_logic;
@@ -272,7 +275,7 @@ port
     PKTEND  : out std_logic;
     FIFOADR : out std_logic_vector(1 downto 0);
 
-    DEBUG_DATA    : out std_logic_vector(31 downto 0);
+    DEBUG_DATA    : out std_logic_vector(15 downto 0);
     DEBUG_VALID   : out std_logic;
     DEBUG_COUNTER : out std_logic_vector(31 downto 0);
     DEBUG_READY   : out std_logic;
@@ -306,10 +309,10 @@ begin
 TimedReset_mod: TimedReset
 port map
 (
-   RESET => RESET,
-   CLOCK => CLOCK,
+    RESET => RESET,
+    CLOCK => CLOCK,
 
-   TIMED_RESET => timed_reset
+    TIMED_RESET => timed_reset
 );
 
 -- Original B200 firmware drives GPIF_CTL9 high to reset the FPGA-side logic.
@@ -325,6 +328,7 @@ begin
     elsif rising_edge(gpif_clk) then
         if clocks_ready = '0' then
             clocks_ready_count <= clocks_ready_count + 1;
+
             if clocks_ready_count = x"FFFF" then
                 clocks_ready <= '1';
             else
@@ -346,6 +350,7 @@ u_clk_out : S6CLK2PIN
 port map
 (
     I => gpif_clk,
+
     O => IFCLK
 );
 
@@ -364,6 +369,7 @@ begin
             else
                 debug_clock_50_counter <= debug_clock_50_counter + 1;
             end if;
+
             LED_1 <= debug_led_1;
         end if;
     end if;
@@ -384,11 +390,11 @@ begin
             else
                 debug_clock_100_counter <= debug_clock_100_counter + 1;
             end if;
+
             LED_2 <= debug_led_2;
         end if;
     end if;
 end process;
-
 
 LED_3 <= '1';
 LED_4 <= '1';
@@ -405,6 +411,7 @@ port map
 (
     areset => global_reset,
     inclk0 => CLOCK,
+
     c0     => gpif_clk,
     locked => pll_locked
 );
@@ -443,7 +450,6 @@ port map
 
 GPIF_CTL11 <= fifoadr(1);
 GPIF_CTL12 <= fifoadr(0);
-
 
 ----------------------------------------------------------------------------------------------------------------
 -- UNUSED PINS DRIVEN
@@ -504,25 +510,26 @@ PIN_N1  <= '0';
 PIN_P1  <= '0';
 PIN_R1  <= '0';
 
-PIN_M19  <= '0';
---PIN_N19  <= '0';
-PIN_B21  <= '0';
-PIN_C21  <= '0';
-PIN_D21  <= '0';
-PIN_E21  <= '0';
-PIN_F21  <= '0';
-PIN_H21  <= '0';
-PIN_J21  <= '0';
-PIN_K21  <= '0';
-PIN_L21  <= '0';
-PIN_M21  <= '0';
-PIN_N21  <= '0';
-PIN_P21  <= '0';
-PIN_R21  <= '0';
-PIN_U21  <= '0';
-PIN_V21  <= '0';
-PIN_W21  <= '0';
-PIN_Y21  <= '0';
+PIN_M19 <= '0';
+--PIN_N19 <= '0';
+PIN_B21 <= '0';
+PIN_C21 <= '0';
+PIN_D21 <= '0';
+PIN_E21 <= '0';
+PIN_F21 <= '0';
+PIN_H21 <= '0';
+PIN_J21 <= '0';
+PIN_K21 <= '0';
+PIN_L21 <= '0';
+PIN_M21 <= '0';
+PIN_N21 <= '0';
+PIN_P21 <= '0';
+PIN_R21 <= '0';
+PIN_U21 <= '0';
+PIN_V21 <= '0';
+PIN_W21 <= '0';
+PIN_Y21 <= '0';
+
 PIN_AB20 <= '0';
 PIN_AB19 <= '0';
 PIN_AB18 <= '0';
@@ -532,25 +539,26 @@ PIN_AB15 <= '0';
 PIN_AB14 <= '0';
 PIN_AB13 <= '0';
 
-PIN_M20  <= '0';
-PIN_N20  <= '0';
---PIN_B22  <= '0';
---PIN_C22  <= '0';
---PIN_D22  <= '0';
---PIN_E22  <= '0';
-PIN_F22  <= '0';
---PIN_H22  <= '0';
---PIN_J22  <= '0';
---PIN_K22  <= '0';
---PIN_L22  <= '0';
---PIN_M22  <= '0';
---PIN_N22  <= '0';
---PIN_P22  <= '0';
---PIN_R22  <= '0';
---PIN_U22  <= '0';
---PIN_V22  <= '0';
---PIN_W22  <= '0';
---PIN_Y22  <= '0';
+PIN_M20 <= '0';
+PIN_N20 <= '0';
+--PIN_B22 <= '0';
+--PIN_C22 <= '0';
+--PIN_D22 <= '0';
+--PIN_E22 <= '0';
+PIN_F22 <= '0';
+--PIN_H22 <= '0';
+--PIN_J22 <= '0';
+--PIN_K22 <= '0';
+--PIN_L22 <= '0';
+--PIN_M22 <= '0';
+--PIN_N22 <= '0';
+--PIN_P22 <= '0';
+--PIN_R22 <= '0';
+--PIN_U22 <= '0';
+--PIN_V22 <= '0';
+--PIN_W22 <= '0';
+--PIN_Y22 <= '0';
+
 PIN_AA20 <= '0';
 PIN_AA19 <= '0';
 PIN_AA18 <= '0';

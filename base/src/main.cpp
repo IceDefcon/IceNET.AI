@@ -1509,43 +1509,20 @@ static void clearhalt_out()
 	}
 }
 
-#include <iostream>
-
 void ControlCenter::on_pb6_rcv_clicked()
 {
 	int r;
 	int transferred = 0;
-	// bool ok;
+	bool ok;
 	unsigned char *buf;
 	char tmpbuf[10];
 
-	// if ( mainwin->cb6_loop->isChecked() )
-	// {
+	if ( mainwin->cb6_loop->isChecked() ) {
 		buf = (unsigned char *)malloc(data_count);
-		// r = cyusb_bulk_transfer(h, mainwin->cb6_in->currentText().toInt(&ok, 16), buf, data_count, &transferred, 1000);
-
-		bool ok;
-		QString epText = mainwin->cb6_in->currentText();
-		int epValue = epText.toInt(&ok, 16);
-
-		qDebug() << "Endpoint text:" << epText;
-		qDebug() << "Converted endpoint (hex):" << QString("0x%1").arg(epValue, 2, 16, QLatin1Char('0'));
-		qDebug() << "Converted endpoint (dec):" << epValue;
-
-		r = cyusb_bulk_transfer(
-		        h,
-		        epValue,
-		        buf,
-		        data_count,
-		        &transferred,
-		        1000
-		    );
-
-
-		std::cout << "Debug ICE 0" << std::endl;
+		r = cyusb_bulk_transfer(h, mainwin->cb6_in->currentText().toInt(&ok, 16), buf,
+				data_count, &transferred, 1000);
 		printf("Bytes read from device = %d\n",transferred);
-		if ( r )
-		{
+		if ( r ) {
 			libusb_error(r, "Data Read Error");
 			clearhalt_in();
 		}
@@ -1553,29 +1530,27 @@ void ControlCenter::on_pb6_rcv_clicked()
 		cum_data_in += transferred;
 		sprintf(tmpbuf,"%d",cum_data_in);
 		mainwin->label6_in->setText(tmpbuf);
-		if ( mainwin->le6_infile->text() != "" )
-		{
+		if ( mainwin->le6_infile->text() != "" ) {
 			r = write(fd_infile, buf, transferred);
 			if (r < 0)
 				printf ("write returned %d\n", r);
 		}
-	// }
-	// else {
-	// 	buf = (unsigned char *)malloc(mainwin->le6_size->text().toInt(&ok, 10));
-	// 	r = cyusb_bulk_transfer(h, mainwin->cb6_in->currentText().toInt(&ok, 16), buf,
-	// 			mainwin->le6_size->text().toInt(&ok, 10), &transferred, 1000);
-	// 	std::cout << "Debug ICE 1" << std::endl;
-	// 	printf("Bytes read from device = %d\n",transferred);
-	// 	dump_data6_in(transferred, buf);
-	// 	cum_data_in += transferred;
-	// 	sprintf(tmpbuf,"%d",cum_data_in);
-	// 	mainwin->label6_in->setText(tmpbuf);
-	// 	if ( mainwin->le6_infile->text() != "" ) {
-	// 		r = write(fd_infile, buf, transferred);
-	// 		if (r < 0)
-	// 			printf ("write returned %d\n", r);
-	// 	}
-	// }
+	}
+	else {
+		buf = (unsigned char *)malloc(mainwin->le6_size->text().toInt(&ok, 10));
+		r = cyusb_bulk_transfer(h, mainwin->cb6_in->currentText().toInt(&ok, 16), buf,
+				mainwin->le6_size->text().toInt(&ok, 10), &transferred, 1000);
+		printf("Bytes read from device = %d\n",transferred);
+		dump_data6_in(transferred, buf);
+		cum_data_in += transferred;
+		sprintf(tmpbuf,"%d",cum_data_in);
+		mainwin->label6_in->setText(tmpbuf);
+		if ( mainwin->le6_infile->text() != "" ) {
+			r = write(fd_infile, buf, transferred);
+			if (r < 0)
+				printf ("write returned %d\n", r);
+		}
+	}
 	free(buf);
 }
 
@@ -1586,7 +1561,6 @@ void ControlCenter::pb6_send_file_selected(unsigned char *buf, int sz)
 	bool ok;
 	char tmpbuf[10];
 
-	printf("Debug 1\n");
 	r = cyusb_bulk_transfer(h, mainwin->cb6_out->currentText().toInt(&ok, 16), buf, sz, &transferred, 1000);
 	printf("Bytes sent to device = %d\n",transferred);
 	if ( r ) {
@@ -1635,7 +1609,7 @@ void ControlCenter::pb6_send_nofile_selected()
 				if ( i == 0 )
 					buf[i] = val;
 				else buf[i] = buf[i-1] + 1;
-			}	
+			}
 		}
 	}
 	else {
@@ -1645,8 +1619,7 @@ void ControlCenter::pb6_send_nofile_selected()
 	cum_data_out = 0;
 	cum_data_in  = 0;
 
-	printf("Debug 0\n");
-	r = cyusb_bulk_transfer(h, mainwin->cb6_out->currentText().toInt(&ok, 16), buf, 
+	r = cyusb_bulk_transfer(h, mainwin->cb6_out->currentText().toInt(&ok, 16), buf,
 			sz, &transferred, 1000);
 
 	printf("Bytes sent to device = %d\n",transferred);
@@ -1666,7 +1639,6 @@ void ControlCenter::pb6_send_nofile_selected()
 		on_pb6_rcv_clicked();
 	}
 }
-
 
 void ControlCenter::on_pb6_clearhalt_out_clicked()
 {

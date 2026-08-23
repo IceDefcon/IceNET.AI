@@ -58,6 +58,8 @@ class gui : public QWidget
     int m_usbDevicesDetected;
     std::unique_ptr<device> m_instanceUsbDevice;
 
+    cyusb_handle *m_fx3Handle;
+
 private slots:
 
     void setupWindow();
@@ -65,12 +67,15 @@ private slots:
     // void printConsole(consoleType type, const QString &message);
 
     void setupUsbDevices();
+    void setupDataSend();
     void registerUsbDevices();
 
     void setupDescriptorsInterface();
     void setupFlashInterface();
     void setupExtensionsInterface();
     void setupCommunicationInterface();
+
+    void sendData(QLineEdit *sendField);
 
 public:
 
