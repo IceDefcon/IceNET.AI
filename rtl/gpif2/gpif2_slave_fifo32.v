@@ -475,55 +475,116 @@ module gpif2_slave_fifo32
 
     wire ctrl_bus_error, tx_bus_error;
 
-   // // ////////////////////////////////////////////////////////////////////
-   // // TX Data Path
-   // wire [31:0] debug_data_fifo;
+   // ////////////////////////////////////////////////////////////////////
+   // TX Data Path
+   wire [31:0] debug_data_fifo;
 
-   //  gpif2_to_fifo64 #(.FIFO_SIZE(DATA_TX_FIFO_SIZE)) gpif2_to_fifo64_tx(
-   //      .gpif_clk(gpif_clk), .gpif_rst(gpif_rst),
-   //      .i_tdata(gpif_data_in), .i_tlast(data_ctrl_tx_tlast), .i_tvalid(data_tx_tvalid), .i_tready(data_tx_tready), // IJB. NOTE data_tx_tready currently unused.
-   //      .fifo_clk(fifo_clk), .fifo_rst(fifo_rst),
-   //      .fifo_nearly_full(data_tx_fifo_nearly_full), .fifo_has_space(data_tx_fifo_has_space),
-   //      .o_tdata(tx_tdata), .o_tlast(tx_tlast), .o_tvalid(tx_tvalid), .o_tready(tx_tready),
-   //      .bus_error(tx_bus_error), .debug(debug_data_fifo)
-   //  );
+    gpif2_to_fifo64 #(.FIFO_SIZE(DATA_TX_FIFO_SIZE)) gpif2_to_fifo64_tx(
+        .gpif_clk(gpif_clk), .gpif_rst(gpif_rst),
+        .i_tdata(gpif_data_in), .i_tlast(data_ctrl_tx_tlast), .i_tvalid(data_tx_tvalid), .i_tready(data_tx_tready), // IJB. NOTE data_tx_tready currently unused.
+        .fifo_clk(fifo_clk), .fifo_rst(fifo_rst),
+        .fifo_nearly_full(data_tx_fifo_nearly_full), .fifo_has_space(data_tx_fifo_has_space),
+        .o_tdata(tx_tdata), .o_tlast(tx_tlast), .o_tvalid(tx_tvalid), .o_tready(tx_tready),
+        .bus_error(tx_bus_error), .debug(debug_data_fifo)
+    );
 
-   // // ////////////////////////////////////////////
-   // // RX Data Path
+   // ////////////////////////////////////////////
+   // RX Data Path
 
-   //  fifo64_to_gpif2 #(.FIFO_SIZE(DATA_RX_FIFO_SIZE)) fifo64_to_gpif2_rx(
-   //      .fifo_clk(fifo_clk), .fifo_rst(fifo_rst),
-   //      .i_tdata(rx_tdata), .i_tlast(rx_tlast), .i_tvalid(rx_tvalid), .i_tready(rx_tready),
-   //      .gpif_clk(gpif_clk), .gpif_rst(gpif_rst),
-   //      .o_tdata(data_rx_tdata), .o_tlast(data_rx_tlast), .o_tvalid(data_rx_tvalid), .o_tready(data_rx_tready)
-   //  );
+    fifo64_to_gpif2 #(.FIFO_SIZE(DATA_RX_FIFO_SIZE)) fifo64_to_gpif2_rx(
+        .fifo_clk(fifo_clk), .fifo_rst(fifo_rst),
+        .i_tdata(rx_tdata), .i_tlast(rx_tlast), .i_tvalid(rx_tvalid), .i_tready(rx_tready),
+        .gpif_clk(gpif_clk), .gpif_rst(gpif_rst),
+        .o_tdata(data_rx_tdata), .o_tlast(data_rx_tlast), .o_tvalid(data_rx_tvalid), .o_tready(data_rx_tready)
+    );
 
-   //  // ////////////////////////////////////////////////////////////////////
-   //  // CTRL path
-   //  wire [31:0] debug_ctrl_fifo;
+    // ////////////////////////////////////////////////////////////////////
+    // CTRL path
+    wire [31:0] debug_ctrl_fifo;
 
-   //  gpif2_to_fifo64 #(.FIFO_SIZE(CTRL_TX_FIFO_SIZE)) gpif2_to_fifo64_ctrl(
-   //      .gpif_clk(gpif_clk), .gpif_rst(gpif_rst),
-   //      .i_tdata(gpif_data_in), .i_tlast(data_ctrl_tx_tlast), .i_tvalid(ctrl_tx_tvalid), .i_tready(ctrl_tx_tready), // IJB. NOTE data_tx_tready currently unused.
-   //      .fifo_clk(fifo_clk), .fifo_rst(fifo_rst),
-   //      .fifo_nearly_full(ctrl_tx_fifo_nearly_full), .fifo_has_space(ctrl_tx_fifo_has_space),
-   //      .o_tdata(ctrl_tdata), .o_tlast(ctrl_tlast), .o_tvalid(ctrl_tvalid), .o_tready(ctrl_tready),
-   //      .bus_error(ctrl_bus_error), .debug(debug_ctrl_fifo)
-   //  );
+    gpif2_to_fifo64 #(.FIFO_SIZE(CTRL_TX_FIFO_SIZE)) gpif2_to_fifo64_ctrl(
+        .gpif_clk(gpif_clk), .gpif_rst(gpif_rst),
+        .i_tdata(gpif_data_in), .i_tlast(data_ctrl_tx_tlast), .i_tvalid(ctrl_tx_tvalid), .i_tready(ctrl_tx_tready), // IJB. NOTE data_tx_tready currently unused.
+        .fifo_clk(fifo_clk), .fifo_rst(fifo_rst),
+        .fifo_nearly_full(ctrl_tx_fifo_nearly_full), .fifo_has_space(ctrl_tx_fifo_has_space),
+        .o_tdata(ctrl_tdata), .o_tlast(ctrl_tlast), .o_tvalid(ctrl_tvalid), .o_tready(ctrl_tready),
+        .bus_error(ctrl_bus_error), .debug(debug_ctrl_fifo)
+    );
 
-   // // ////////////////////////////////////////////////////////////////////
-   // // RESP path
+   // ////////////////////////////////////////////////////////////////////
+   // RESP path
 
-   //  fifo64_to_gpif2 #(.FIFO_SIZE(CTRL_RX_FIFO_SIZE)) fifo64_to_gpif2_resp(
-   //      .fifo_clk(fifo_clk), .fifo_rst(fifo_rst),
-   //      .i_tdata(resp_tdata), .i_tlast(resp_tlast), .i_tvalid(resp_tvalid), .i_tready(resp_tready),
-   //      .gpif_clk(gpif_clk), .gpif_rst(gpif_rst),
-   //      .o_tdata(ctrl_rx_tdata), .o_tlast(ctrl_rx_tlast), .o_tvalid(ctrl_rx_tvalid), .o_tready(ctrl_rx_tready)
-   //  );
+    fifo64_to_gpif2 #(.FIFO_SIZE(CTRL_RX_FIFO_SIZE)) fifo64_to_gpif2_resp(
+        .fifo_clk(fifo_clk), .fifo_rst(fifo_rst),
+        .i_tdata(resp_tdata), .i_tlast(resp_tlast), .i_tvalid(resp_tvalid), .i_tready(resp_tready),
+        .gpif_clk(gpif_clk), .gpif_rst(gpif_rst),
+        .o_tdata(ctrl_rx_tdata), .o_tlast(ctrl_rx_tlast), .o_tvalid(ctrl_rx_tvalid), .o_tready(ctrl_rx_tready)
+    );
+
+   // ////////////////////////////////////////////
+   //    DEBUG
+/* -----\/----- EXCLUDED -----\/-----
+
+   wire [35:0] CONTROL0;
+   reg         wr_fifo_eop_debug;
+   reg         read_ready_go_debug;
+   reg         fifo_nearly_full_debug;
+   reg         local_fifo_ready_debug;
+   reg         slwr_debug;
+   reg         slrd_debug;
+   reg         sloe_debug;
+   reg         pktend_debug;
+   reg [1:0]   fifoadr_debug;
+   reg         ep_wmark1_debug;
+   reg         ep_ready1_debug;
+   reg [3:0]   state_debug;
+   reg         wr_fifo_xfer_debug;
 
 
 
+   always @(posedge gpif_clk) begin
+      wr_fifo_eop_debug <= wr_fifo_eop;
+      read_ready_go_debug <= read_ready_go;
+      fifo_nearly_full_debug <= fifo_nearly_full;
+      local_fifo_ready_debug <= local_fifo_ready;
+      wr_fifo_xfer_debug <= wr_fifo_xfer;
+      slwr_debug <= slwr;
+      slrd_debug <= slrd;
+      sloe_debug <= sloe;
+      pktend_debug <= pktend;
+      fifoadr_debug[1:0] <= fifoadr;
+      ep_wmark1_debug <= fx3_wmark1;
+      ep_ready1_debug <= fx3_ready1;
+      state_debug[3:0] <= state;
+   end
 
+   chipscope_ila_32 chipscope_ila_32_0 (
+              .CONTROL(CONTROL0), // INOUT BUS [35:0]
+              .CLK(gpif_clk), // IN
+              .TRIG0({
+                debug_data_fifo[5:0],
+                debug_ctrl_fifo[5:0],
+                wr_fifo_eop_debug,
+                  read_ready_go_debug,
+                  fifo_nearly_full_debug,
+                  local_fifo_ready_debug,
+                wr_fifo_xfer_debug,
+                  slwr_debug,
+                  slrd_debug,
+                  sloe_debug,
+                  pktend_debug,
+                fifoadr_debug[1:0],
+                  ep_wmark1_debug,
+                  ep_ready1_debug,
+                state_debug[3:0]
+                  }) // IN BUS [31:0]
+              );
+
+   chipscope_icon chipscope_icon_i0
+     (
+      .CONTROL0(CONTROL0) // INOUT BUS [35:0]
+      );
+ -----/\----- EXCLUDED -----/\----- */
 
 
 endmodule // gpif2_slave_fifo32

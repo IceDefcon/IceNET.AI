@@ -182,7 +182,7 @@ void gui::sendData(QLineEdit *sendField)
      * FX3 uses a byte buffer. Send the 16-bit value
      * in little-endian order.
      */
-    constexpr int BUFFER_SIZE = sizeof(uint16_t);
+    constexpr int BUFFER_SIZE = 2*sizeof(uint16_t);
 
     unsigned char *buffer = static_cast<unsigned char *>(malloc(BUFFER_SIZE));
 
@@ -193,8 +193,10 @@ void gui::sendData(QLineEdit *sendField)
         return;
     }
 
-    buffer[0] = static_cast<unsigned char>(value & 0x00FF);
-    buffer[1] = static_cast<unsigned char>((value >> 8) & 0x00FF);
+    buffer[0] = 0xAB;
+    buffer[1] = 0xCD;
+    buffer[2] = 0x23;
+    buffer[3] = 0x67;
 
     constexpr unsigned char FX3_OUT_ENDPOINT = 0x01;
     constexpr unsigned int FX3_TIMEOUT_MS = 1000;
