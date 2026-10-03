@@ -140,22 +140,25 @@ void gui::setupDataSend()
     uint32_t yBase = w.yGap;
 
     QPushButton *sendButton = new QPushButton("SEND", m_devicePanel);
-    sendButton->setGeometry(xBase, yBase + w.yGap * 2 + w.yLogo + w.yUnit, w.xUnit, w.yUnit);
+    sendButton->setGeometry(xBase,
+                            yBase + w.yGap * 2 + w.yLogo + w.yUnit,
+                            w.xUnit,
+                            w.yUnit);
     sendButton->show();
 
     QLineEdit *sendField = new QLineEdit(m_devicePanel);
-    sendField->setGeometry(xBase + w.xGap + w.xUnit, yBase + w.yGap * 2 + w.yLogo + w.yUnit, w.xUnit, w.yUnit);
-    sendField->setText("0x" + QString::number(0x1234, 16).toUpper());
+    sendField->setGeometry(xBase + w.xGap + w.xUnit,
+                           yBase + w.yGap * 2 + w.yLogo + w.yUnit,
+                           w.xUnit,
+                           w.yUnit);
+    sendField->setMaxLength(10); // 0xFFFFFFFF
+    sendField->setText("0x" + QString::number(0x12345678U, 16).toUpper());
     sendField->show();
 
-    /* Send data to FX3 */
-    auto sendData = [this, sendField]()
+    connect(sendButton, &QPushButton::clicked, this, [this, sendField]()
     {
-        this->sendData(sendField);
-    };
-
-    /* Connect SEND button */
-    connect(sendButton, &QPushButton::clicked, this, sendData);
+        sendData(sendField);
+    });
 }
 
 void gui::sendData(QLineEdit *sendField)
@@ -169,59 +172,65 @@ void gui::sendData(QLineEdit *sendField)
 
     bool ok = false;
 
-    uint16_t value = sendField->text().toUShort(&ok, 0);
+    const uint32_t value = static_cast<uint32_t>(
+        sendField->text().trimmed().toUInt(&ok, 0));
 
     if(!ok)
     {
-        std::cout << "[ERROR] [FX3] INVALID HEX VALUE = " << sendField->text().toStdString() << std::endl;
+        std::cout << "[ERROR] [FX3] INVALID 32-BIT HEX VALUE = "
+                  << sendField->text().toStdString() << std::endl;
 
         return;
     }
 
-    /*
-     * FX3 uses a byte buffer. Send the 16-bit value
-     * in little-endian order.
-     */
-    constexpr int BUFFER_SIZE = sizeof(uint16_t);
-
-    unsigned char *buffer = static_cast<unsigned char *>(malloc(BUFFER_SIZE));
-
-    if(buffer == nullptr)
+    // FX3 USB transfers bytes. Send one uint32_t in little-endian order:
+    // 0x12345678 -> 78 56 34 12.
+    std::array<unsigned char, sizeof(uint32_t)> buffer =
     {
-        std::cout << "[ERROR] [FX3] BUFFER ALLOCATION FAILED" << std::endl;
+        static_cast<unsigned char>( value        & 0xFFU),
+        static_cast<unsigned char>((value >>  8) & 0xFFU),
+        static_cast<unsigned char>((value >> 16) & 0xFFU),
+        static_cast<unsigned char>((value >> 24) & 0xFFU)
+    };
 
-        return;
-    }
-
-    buffer[0] = static_cast<unsigned char>(value & 0x00FF);
-    buffer[1] = static_cast<unsigned char>((value >> 8) & 0x00FF);
-
-    constexpr unsigned char FX3_OUT_ENDPOINT = 0x01;
-    constexpr unsigned int FX3_TIMEOUT_MS = 1000;
+    constexpr unsigned char FX3_OUT_ENDPOINT = 0x01U;
+    constexpr unsigned int FX3_TIMEOUT_MS = 1000U;
+    constexpr int BUFFER_SIZE = static_cast<int>(sizeof(uint32_t));
 
     int transferred = 0;
 
-    int status = cyusb_bulk_transfer(
+    const int status = cyusb_bulk_transfer(
         m_fx3Handle,
         FX3_OUT_ENDPOINT,
-        buffer,
+        buffer.data(),
         BUFFER_SIZE,
         &transferred,
         FX3_TIMEOUT_MS);
 
     if(status != 0)
     {
-        std::cout << "[ERROR] [FX3] USB BULK TRANSFER FAILED, ERROR = " << status << std::endl;
-
-        free(buffer);
+        std::cout << "[ERROR] [FX3] USB BULK TRANSFER FAILED, ERROR = "
+                  << status << std::endl;
 
         return;
     }
 
-    std::cout << "[INFO] [FX3] SENT VALUE = 0x" << QString("%1").arg(value, 4, 16, QChar('0')).toUpper().toStdString() << " BYTES = " << transferred << std::endl;
+    if(transferred != BUFFER_SIZE)
+    {
+        std::cout << "[ERROR] [FX3] PARTIAL USB BULK TRANSFER, BYTES = "
+                  << transferred << " / " << BUFFER_SIZE << std::endl;
 
-    free(buffer);
+        return;
+    }
+
+    std::cout << "[INFO] [FX3] SENT VALUE = 0x"
+              << QString("%1")
+                     .arg(static_cast<qulonglong>(value), 8, 16, QChar('0'))
+                     .toUpper()
+                     .toStdString()
+              << " BYTES = " << transferred << std::endl;
 }
+
 
 void gui::registerUsbDevices()
 {

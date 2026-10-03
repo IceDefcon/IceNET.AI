@@ -155,7 +155,9 @@ port
     PIN_AA14 : out std_logic;
     PIN_AA13 : out std_logic;
 
-    GPIF_D : inout std_logic_vector(15 downto 0); -- FX3 DQ[15:0]
+    -- Fixed x32 GPIF-II data bus. In the Quartus pin-assignment file,
+    -- map GPIF_D(31 downto 0) to the FX3 DQ(31 downto 0) pins.
+    GPIF_D : inout std_logic_vector(31 downto 0); -- FX3 DQ[31:0]
 
     ----------------------------------------------------------------------------------------------------------------
     -- DEBUG LEDS
@@ -187,7 +189,7 @@ signal gpif_rst     : std_logic := '0';
 ----------------------------------------------------------------------------------------------------------------
 -- GPIF Receive Debug
 ----------------------------------------------------------------------------------------------------------------
-signal gpif_debug_data    : std_logic_vector(15 downto 0) := (others => '0');
+signal gpif_debug_data    : std_logic_vector(31 downto 0) := (others => '0');
 signal gpif_debug_valid   : std_logic := '0';
 signal gpif_debug_counter : std_logic_vector(31 downto 0) := (others => '0');
 
@@ -265,7 +267,7 @@ port
     GPIF_RST : in std_logic;
     GPIF_ENB : in std_logic;
 
-    GPIF_D   : inout std_logic_vector(15 downto 0);
+    GPIF_D   : inout std_logic_vector(31 downto 0);
     GPIF_CTL : in std_logic_vector(3 downto 0);
 
     SLOE    : out std_logic;
@@ -275,7 +277,7 @@ port
     PKTEND  : out std_logic;
     FIFOADR : out std_logic_vector(1 downto 0);
 
-    DEBUG_DATA    : out std_logic_vector(15 downto 0);
+    DEBUG_DATA    : out std_logic_vector(31 downto 0);
     DEBUG_VALID   : out std_logic;
     DEBUG_COUNTER : out std_logic_vector(31 downto 0);
     DEBUG_READY   : out std_logic;
@@ -317,7 +319,7 @@ port map
 
 -- Original B200 firmware drives GPIF_CTL9 high to reset the FPGA-side logic.
 -- Keep the local RESET path as well, so either source can reset the design.
-global_reset <= timed_reset or GPIF_CTL9;
+global_reset <= timed_reset;
 
 process(gpif_clk, global_reset, pll_locked)
 begin
@@ -417,7 +419,7 @@ port map
 );
 
 ----------------------------------------------------------------------------------------------------------------
--- GPIF-II Receive-Only Debug Controller
+-- x32 GPIF-II Receive-Only Debug Controller
 ----------------------------------------------------------------------------------------------------------------
 GPIF_II_Controller_mod : GPIF_II_Controller
 generic map
