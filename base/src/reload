@@ -1,3 +1,4 @@
-qmake controlcenter.pro
 make clean
 make -j
+./convert
+cp cyfxslfifosync.img  /home/marek/code.lab/IceNET.AI/base/src/fx3_firmware.img

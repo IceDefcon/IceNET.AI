@@ -1,0 +1,1 @@
+./elf2img -i cyfxslfifosync.elf -o cyfxslfifosync.img -v
