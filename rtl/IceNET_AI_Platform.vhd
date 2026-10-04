@@ -81,9 +81,9 @@ port
     GPIF_CTL11 : out std_logic; -- PIN_A16 :: A1
     PIN_A15    : out std_logic;
     GPIF_CTL9  : in std_logic;  -- PIN_A14 :: global_reset
-    GPIF_CTL8  : in std_logic;  -- PIN_A13 :: GPIO
+    GPIF_CTL8  : in std_logic;  -- PIN_A13 :: FLAGD / thread-3 watermark
     GPIF_CTL7  : out std_logic; -- PIN_A10 :: n_PKTEND
-    GPIF_CTL6  : in std_logic;  -- PIN_A9  :: GPIO
+    GPIF_CTL6  : in std_logic;  -- PIN_A9  :: FLAGC / thread-3 ready
     GPIF_CTL5  : in std_logic;  -- PIN_A8  :: FLAGB
     GPIF_CTL4  : in std_logic;  -- PIN_A7  :: FLAGA
     GPIF_CTL3  : out std_logic; -- PIN_A6  :: n_SLRD
@@ -187,7 +187,7 @@ signal global_reset : std_logic := '0';
 signal gpif_rst     : std_logic := '0';
 
 ----------------------------------------------------------------------------------------------------------------
--- GPIF Receive Debug
+-- GPIF Loop-Through Debug
 ----------------------------------------------------------------------------------------------------------------
 signal gpif_debug_data    : std_logic_vector(31 downto 0) := (others => '0');
 signal gpif_debug_valid   : std_logic := '0';
@@ -259,7 +259,12 @@ end component;
 component GPIF_II_Controller
 generic
 (
-    ADDR_DATA_TX : std_logic_vector(1 downto 0) := "00"
+    -- B210 names: DATA_TX is FX3 -> FPGA, DATA_RX is FPGA -> FX3.
+    ADDR_DATA_TX : std_logic_vector(1 downto 0) := "11";
+    ADDR_DATA_RX : std_logic_vector(1 downto 0) := "00";
+
+    -- 1024 x 32-bit loopback FIFO words.
+    LOOP_FIFO_ADDR_WIDTH : positive := 10
 );
 port
 (
@@ -317,9 +322,9 @@ port map
     TIMED_RESET => timed_reset
 );
 
--- Original B200 firmware drives GPIF_CTL9 high to reset the FPGA-side logic.
--- Keep the local RESET path as well, so either source can reset the design.
-global_reset <= timed_reset;
+-- Match the B210 GPIF reset path: FX3 CTL9 can reset FPGA-side logic.
+-- Keep the board RESET path as an additional local reset source.
+global_reset <= timed_reset or GPIF_CTL9;
 
 process(gpif_clk, global_reset, pll_locked)
 begin
@@ -419,12 +424,16 @@ port map
 );
 
 ----------------------------------------------------------------------------------------------------------------
--- x32 GPIF-II Receive-Only Debug Controller
+-- x32 GPIF-II B210-Equivalent Loop-Through Controller
+--
+-- USB EP1 OUT -> FX3 thread 3 -> FPGA -> FX3 thread 0 -> USB EP1 IN
 ----------------------------------------------------------------------------------------------------------------
 GPIF_II_Controller_mod : GPIF_II_Controller
 generic map
 (
-    ADDR_DATA_TX => "11"
+    ADDR_DATA_TX           => "11",
+    ADDR_DATA_RX           => "00",
+    LOOP_FIFO_ADDR_WIDTH   => 10
 )
 port map
 (
