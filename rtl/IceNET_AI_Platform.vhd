@@ -185,6 +185,7 @@ signal clocks_ready : std_logic := '0';
 signal timed_reset  : std_logic := '0';
 signal global_reset : std_logic := '0';
 signal gpif_rst     : std_logic := '0';
+signal gpif_reset_request : std_logic := '1';
 
 ----------------------------------------------------------------------------------------------------------------
 -- GPIF Receive Debug
@@ -196,6 +197,15 @@ signal gpif_debug_counter : std_logic_vector(31 downto 0) := (others => '0');
 signal gpif_debug_ready : std_logic := '0';
 signal gpif_debug_wmark : std_logic := '0';
 signal gpif_debug_state : std_logic_vector(3 downto 0) := (others => '0');
+
+signal gpif_tx_data  : std_logic_vector(31 downto 0) := (others => '0');
+signal gpif_tx_valid : std_logic := '0';
+signal gpif_tx_last  : std_logic := '0';
+signal gpif_tx_ready : std_logic := '0';
+
+signal gpif_rx_data  : std_logic_vector(31 downto 0) := (others => '0');
+signal gpif_rx_valid : std_logic := '0';
+signal gpif_rx_ready : std_logic := '0';
 
 ----------------------------------------------------------------------------------------------------------------
 -- PLL
@@ -259,7 +269,8 @@ end component;
 component GPIF_II_Controller
 generic
 (
-    ADDR_DATA_TX : std_logic_vector(1 downto 0) := "00"
+    ADDR_DATA_TX : std_logic_vector(1 downto 0) := "00";
+    ADDR_DATA_RX : std_logic_vector(1 downto 0) := "11"
 );
 port
 (
@@ -276,6 +287,15 @@ port
     SLCS    : out std_logic;
     PKTEND  : out std_logic;
     FIFOADR : out std_logic_vector(1 downto 0);
+
+    TX_DATA  : in std_logic_vector(31 downto 0);
+    TX_VALID : in std_logic;
+    TX_LAST  : in std_logic;
+    TX_READY : out std_logic;
+
+    RX_DATA  : out std_logic_vector(31 downto 0);
+    RX_VALID : out std_logic;
+    RX_READY : in std_logic;
 
     DEBUG_DATA    : out std_logic_vector(31 downto 0);
     DEBUG_VALID   : out std_logic;
@@ -319,7 +339,7 @@ port map
 
 -- Original B200 firmware drives GPIF_CTL9 high to reset the FPGA-side logic.
 -- Keep the local RESET path as well, so either source can reset the design.
-global_reset <= timed_reset or GPIF_CTL9;
+global_reset <= timed_reset;
 
 process(gpif_clk, global_reset, pll_locked)
 begin
@@ -340,11 +360,13 @@ begin
     end if;
 end process;
 
+gpif_reset_request <= not clocks_ready;
+
 u_reset_sync : reset_sync
 port map
 (
     clk       => gpif_clk,
-    reset_in  => not clocks_ready,
+    reset_in  => gpif_reset_request,
     reset_out => gpif_rst
 );
 
@@ -424,7 +446,8 @@ port map
 GPIF_II_Controller_mod : GPIF_II_Controller
 generic map
 (
-    ADDR_DATA_TX => "11"
+    ADDR_DATA_TX => "00",
+    ADDR_DATA_RX => "11"
 )
 port map
 (
@@ -442,6 +465,15 @@ port map
     PKTEND  => GPIF_CTL7,
     FIFOADR => fifoadr,
 
+    TX_DATA  => gpif_tx_data,
+    TX_VALID => gpif_tx_valid,
+    TX_LAST  => gpif_tx_last,
+    TX_READY => gpif_tx_ready,
+
+    RX_DATA  => gpif_rx_data,
+    RX_VALID => gpif_rx_valid,
+    RX_READY => gpif_rx_ready,
+
     DEBUG_DATA    => gpif_debug_data,
     DEBUG_VALID   => gpif_debug_valid,
     DEBUG_COUNTER => gpif_debug_counter,
@@ -452,6 +484,11 @@ port map
 
 GPIF_CTL11 <= fifoadr(1);
 GPIF_CTL12 <= fifoadr(0);
+
+gpif_tx_data  <= gpif_rx_data;
+gpif_tx_valid <= gpif_rx_valid;
+gpif_tx_last  <= '1';
+gpif_rx_ready <= gpif_tx_ready;
 
 ----------------------------------------------------------------------------------------------------------------
 -- UNUSED PINS DRIVEN
