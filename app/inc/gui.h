@@ -75,7 +75,7 @@ private slots:
     void setupExtensionsInterface();
     void setupCommunicationInterface();
 
-    void sendData(QLineEdit *sendField);
+    void sendData();
 
 public:
 

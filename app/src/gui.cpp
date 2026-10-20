@@ -146,22 +146,10 @@ void gui::setupDataSend()
                             w.yUnit);
     sendButton->show();
 
-    QLineEdit *sendField = new QLineEdit(m_devicePanel);
-    sendField->setGeometry(xBase + w.xGap + w.xUnit,
-                           yBase + w.yGap * 2 + w.yLogo + w.yUnit,
-                           w.xUnit,
-                           w.yUnit);
-    sendField->setMaxLength(10); // 0xFFFFFFFF
-    sendField->setText("0x" + QString::number(0x12345678U, 16).toUpper());
-    sendField->show();
-
-    connect(sendButton, &QPushButton::clicked, this, [this, sendField]()
-    {
-        sendData(sendField);
-    });
+    connect(sendButton, &QPushButton::clicked, this, &gui::sendData);
 }
 
-void gui::sendData(QLineEdit *sendField)
+void gui::sendData()
 {
     if(m_fx3Handle == nullptr)
     {
@@ -170,35 +158,49 @@ void gui::sendData(QLineEdit *sendField)
         return;
     }
 
-    bool ok = false;
-
-    const uint32_t value = static_cast<uint32_t>(
-        sendField->text().trimmed().toUInt(&ok, 0));
-
-    if(!ok)
-    {
-        std::cout << "[ERROR] [FX3] INVALID 32-BIT HEX VALUE = "
-                  << sendField->text().toStdString() << std::endl;
-
-        return;
-    }
-
-    // FX3 USB transfers bytes. Send one uint32_t in little-endian order:
-    // 0x12345678 -> 78 56 34 12.
-    std::array<unsigned char, sizeof(uint32_t)> buffer =
-    {
-        static_cast<unsigned char>( value        & 0xFFU),
-        static_cast<unsigned char>((value >>  8) & 0xFFU),
-        static_cast<unsigned char>((value >> 16) & 0xFFU),
-        static_cast<unsigned char>((value >> 24) & 0xFFU)
-    };
-
-    std::array<unsigned char, sizeof(uint32_t)> receiveBuffer = {};
-
     constexpr unsigned char FX3_OUT_ENDPOINT = 0x01U;
     constexpr unsigned char FX3_IN_ENDPOINT = 0x81U;
     constexpr unsigned int FX3_TIMEOUT_MS = 1000U;
-    constexpr int BUFFER_SIZE = static_cast<int>(sizeof(uint32_t));
+
+#if 1
+    constexpr int WORD_COUNT = 2;
+
+    const std::array<uint32_t, WORD_COUNT> words =
+    {
+        0x11223344U,
+        0xAABBCCDDU
+    };
+#else
+    constexpr int WORD_COUNT = 128;
+    constexpr uint32_t WORD_PREFIX = 0xC0DE0000U;
+
+    std::array<uint32_t, WORD_COUNT> words = {};
+
+    for(int wordIndex = 0; wordIndex < WORD_COUNT; ++wordIndex)
+    {
+        words[wordIndex] =
+            WORD_PREFIX | static_cast<uint32_t>(wordIndex + 1);
+    }
+#endif
+
+    constexpr int WORD_SIZE = 4;
+    constexpr int BUFFER_SIZE = WORD_COUNT * WORD_SIZE;
+
+    std::array<unsigned char, BUFFER_SIZE> buffer = {};
+    std::array<unsigned char, BUFFER_SIZE> receiveBuffer = {};
+
+    for(int wordIndex = 0; wordIndex < WORD_COUNT; ++wordIndex)
+    {
+        const uint32_t value = words[wordIndex];
+        const int offset = wordIndex * WORD_SIZE;
+
+        // FX3 USB transfers bytes. Send one uint32_t in little-endian order:
+        // 0x12345678 -> 78 56 34 12.
+        buffer[offset]     = static_cast<unsigned char>( value        & 0xFFU);
+        buffer[offset + 1] = static_cast<unsigned char>((value >>  8) & 0xFFU);
+        buffer[offset + 2] = static_cast<unsigned char>((value >> 16) & 0xFFU);
+        buffer[offset + 3] = static_cast<unsigned char>((value >> 24) & 0xFFU);
+    }
 
     int transferred = 0;
 
@@ -228,64 +230,87 @@ void gui::sendData(QLineEdit *sendField)
         return;
     }
 
-    std::cout << "[INFO] [FX3] SENT VALUE = 0x"
-              << QString("%1")
-                     .arg(static_cast<qulonglong>(value), 8, 16, QChar('0'))
-                     .toUpper()
-                     .toStdString()
-              << " BYTES = " << transferred << std::endl;
+    std::cout << "[INFO] [FX3] SENT WORDS = " << WORD_COUNT << " BYTES = " << transferred << std::endl;
 
-    int received = 0;
+    int totalReceived = 0;
 
-    const int receiveStatus = cyusb_bulk_transfer(
-        m_fx3Handle,
-        FX3_IN_ENDPOINT,
-        receiveBuffer.data(),
-        BUFFER_SIZE,
-        &received,
-        FX3_TIMEOUT_MS);
-
-    if(receiveStatus != 0)
+    while(totalReceived < BUFFER_SIZE)
     {
-        std::cout << "[ERROR] [FX3] USB BULK RECEIVE FAILED, ERROR = "
-                  << receiveStatus
-                  << " BYTES = " << received
-                  << " / " << BUFFER_SIZE << std::endl;
+        int received = 0;
 
+        const int receiveStatus = cyusb_bulk_transfer(
+            m_fx3Handle,
+            FX3_IN_ENDPOINT,
+            receiveBuffer.data() + totalReceived,
+            BUFFER_SIZE - totalReceived,
+            &received,
+            FX3_TIMEOUT_MS);
+
+        totalReceived += received;
+
+        if(receiveStatus != 0)
+        {
+            std::cout << "[ERROR] [FX3] USB BULK RECEIVE FAILED, ERROR = "
+                      << receiveStatus
+                      << " BYTES = " << totalReceived
+                      << " / " << BUFFER_SIZE << std::endl;
+
+            return;
+        }
+
+        if(received == 0)
+        {
+            std::cout << "[ERROR] [FX3] USB BULK RECEIVE RETURNED NO DATA"
+                      << " BYTES = " << totalReceived
+                      << " / " << BUFFER_SIZE << std::endl;
+
+            return;
+        }
+    }
+
+    bool dataMatch = true;
+
+    for(int wordIndex = 0; wordIndex < WORD_COUNT; ++wordIndex)
+    {
+        const int offset = wordIndex * WORD_SIZE;
+
+        const uint32_t receivedValue =
+             static_cast<uint32_t>(receiveBuffer[offset])           |
+            (static_cast<uint32_t>(receiveBuffer[offset + 1]) <<  8) |
+            (static_cast<uint32_t>(receiveBuffer[offset + 2]) << 16) |
+            (static_cast<uint32_t>(receiveBuffer[offset + 3]) << 24);
+
+        std::cout << "[INFO] [FX3] RECEIVED WORD[" << wordIndex << "] = 0x"
+                  << QString("%1")
+                         .arg(static_cast<qulonglong>(receivedValue), 8, 16, QChar('0'))
+                         .toUpper()
+                         .toStdString()
+                  << std::endl;
+
+        if(receivedValue != words[wordIndex])
+        {
+            std::cout << "[ERROR] [FX3] LOOPBACK DATA MISMATCH, WORD = "
+                      << wordIndex
+                      << " EXPECTED = 0x"
+                      << QString("%1")
+                             .arg(static_cast<qulonglong>(words[wordIndex]), 8, 16, QChar('0'))
+                             .toUpper()
+                             .toStdString()
+                      << std::endl;
+
+            dataMatch = false;
+        }
+    }
+
+    if(!dataMatch)
+    {
         return;
     }
 
-    if(received != BUFFER_SIZE)
-    {
-        std::cout << "[ERROR] [FX3] PARTIAL USB BULK RECEIVE, BYTES = "
-                  << received << " / " << BUFFER_SIZE << std::endl;
-
-        return;
-    }
-
-    const uint32_t receivedValue =
-         static_cast<uint32_t>(receiveBuffer[0])        |
-        (static_cast<uint32_t>(receiveBuffer[1]) <<  8) |
-        (static_cast<uint32_t>(receiveBuffer[2]) << 16) |
-        (static_cast<uint32_t>(receiveBuffer[3]) << 24);
-
-    std::cout << "[INFO] [FX3] RECEIVED VALUE = 0x"
-              << QString("%1")
-                     .arg(static_cast<qulonglong>(receivedValue), 8, 16, QChar('0'))
-                     .toUpper()
-                     .toStdString()
-              << " BYTES = " << received << std::endl;
-
-    if(receivedValue != value)
-    {
-        std::cout << "[ERROR] [FX3] LOOPBACK DATA MISMATCH" << std::endl;
-
-        return;
-    }
-
-    std::cout << "[INFO] [FX3] LOOPBACK DATA VERIFIED" << std::endl;
+    std::cout << "[INFO] [FX3] LOOPBACK DATA VERIFIED"
+              << " WORDS = " << WORD_COUNT
+              << " BYTES = " << totalReceived << std::endl;
 }
-
 
 void gui::registerUsbDevices()
 {
