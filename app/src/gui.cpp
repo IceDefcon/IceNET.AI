@@ -193,7 +193,10 @@ void gui::sendData(QLineEdit *sendField)
         static_cast<unsigned char>((value >> 24) & 0xFFU)
     };
 
+    std::array<unsigned char, sizeof(uint32_t)> receiveBuffer = {};
+
     constexpr unsigned char FX3_OUT_ENDPOINT = 0x01U;
+    constexpr unsigned char FX3_IN_ENDPOINT = 0x81U;
     constexpr unsigned int FX3_TIMEOUT_MS = 1000U;
     constexpr int BUFFER_SIZE = static_cast<int>(sizeof(uint32_t));
 
@@ -210,7 +213,9 @@ void gui::sendData(QLineEdit *sendField)
     if(status != 0)
     {
         std::cout << "[ERROR] [FX3] USB BULK TRANSFER FAILED, ERROR = "
-                  << status << std::endl;
+                  << status
+                  << " BYTES = " << transferred
+                  << " / " << BUFFER_SIZE << std::endl;
 
         return;
     }
@@ -229,6 +234,56 @@ void gui::sendData(QLineEdit *sendField)
                      .toUpper()
                      .toStdString()
               << " BYTES = " << transferred << std::endl;
+
+    int received = 0;
+
+    const int receiveStatus = cyusb_bulk_transfer(
+        m_fx3Handle,
+        FX3_IN_ENDPOINT,
+        receiveBuffer.data(),
+        BUFFER_SIZE,
+        &received,
+        FX3_TIMEOUT_MS);
+
+    if(receiveStatus != 0)
+    {
+        std::cout << "[ERROR] [FX3] USB BULK RECEIVE FAILED, ERROR = "
+                  << receiveStatus
+                  << " BYTES = " << received
+                  << " / " << BUFFER_SIZE << std::endl;
+
+        return;
+    }
+
+    if(received != BUFFER_SIZE)
+    {
+        std::cout << "[ERROR] [FX3] PARTIAL USB BULK RECEIVE, BYTES = "
+                  << received << " / " << BUFFER_SIZE << std::endl;
+
+        return;
+    }
+
+    const uint32_t receivedValue =
+         static_cast<uint32_t>(receiveBuffer[0])        |
+        (static_cast<uint32_t>(receiveBuffer[1]) <<  8) |
+        (static_cast<uint32_t>(receiveBuffer[2]) << 16) |
+        (static_cast<uint32_t>(receiveBuffer[3]) << 24);
+
+    std::cout << "[INFO] [FX3] RECEIVED VALUE = 0x"
+              << QString("%1")
+                     .arg(static_cast<qulonglong>(receivedValue), 8, 16, QChar('0'))
+                     .toUpper()
+                     .toStdString()
+              << " BYTES = " << received << std::endl;
+
+    if(receivedValue != value)
+    {
+        std::cout << "[ERROR] [FX3] LOOPBACK DATA MISMATCH" << std::endl;
+
+        return;
+    }
+
+    std::cout << "[INFO] [FX3] LOOPBACK DATA VERIFIED" << std::endl;
 }
 
 
