@@ -150,6 +150,24 @@ architecture rtl of GPIF_II_Controller is
 
     signal drive_data : std_logic;
 
+    -- SignalTap observation points. No state-machine or interface changes.
+    -- Acquire using GPIF_CLK; trigger on debug_valid_reg = '1'.
+    -- Read rx_data_reg (DEBUG_DATA), not the live GPIF_D bus, at the trigger.
+    attribute keep : boolean;
+    attribute preserve : boolean;
+    attribute noprune : boolean;
+
+    attribute keep of drive_data : signal is true;
+    attribute preserve of rx_data_reg : signal is true;
+    attribute preserve of tx_data_reg : signal is true;
+    attribute preserve of debug_valid_reg : signal is true;
+    attribute preserve of rx_valid_reg : signal is true;
+    attribute preserve of tx_pending : signal is true;
+    attribute noprune of rx_data_reg : signal is true;
+    attribute noprune of tx_data_reg : signal is true;
+    attribute noprune of debug_valid_reg : signal is true;
+
+
 begin
 
     assert ADDR_DATA_TX /= ADDR_DATA_RX

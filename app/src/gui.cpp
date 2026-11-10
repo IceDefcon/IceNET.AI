@@ -163,12 +163,12 @@ void gui::sendData()
     constexpr unsigned int FX3_TIMEOUT_MS = 1000U;
 
 #if 1
-    constexpr int WORD_COUNT = 2;
+    constexpr int WORD_COUNT = 1;
 
     const std::array<uint32_t, WORD_COUNT> words =
     {
-        0x11223344U,
-        0xAABBCCDDU
+        // 0x1111FFFFU,
+        0x3333FFFFU
     };
 #else
     constexpr int WORD_COUNT = 128;
